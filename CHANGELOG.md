@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.5
+- Stops the blue glow on slots after /reload. That was the game's own "new item" glow from its button template; Baggie now silences all of the template's glows and draws only its own.
+
 ## v0.1.4
 - Fixes the "Baggie has been blocked from an action only available to the Blizzard UI" popup. Baggie no longer replaces the click and drag scripts on the game's item buttons (that tainted using and equipping items); Alt+click and Pin mode now use a transparent overlay of Baggie's own.
 - If the game blocks something anyway, Baggie prints which action it was.

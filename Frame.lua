@@ -5,6 +5,7 @@ B.Frame = F
 
 local CELL, GAP, PAD, TOP, BOTTOM = 37, 4, 12, 62, 34
 local merchantOpen, openedByUs = false, false
+local QuietTemplate
 local GOLD = { 0.88, 0.69, 0.29 }
 
 local win, bagFrames, buttons, ghosts = nil, {}, {}, {}
@@ -78,7 +79,7 @@ local function UpdateButton(btn, text)
     end
     local n = tonumber(count) or 0
     btn.baggieCount:SetText((tex and n > 1) and tostring(n) or "")
-    if type(btn.IconBorder) == "table" then btn.IconBorder:Hide() end
+    QuietTemplate(btn)
 
     if tex and B.db.borders and (quality or 0) >= 2 then
         local r, g, b = QualityColor(quality)
@@ -217,7 +218,28 @@ local function MakeBagFrame(bag)
     return f
 end
 
+local TEMPLATE_GLOWS = { "NewItemTexture", "BattlepayItemTexture", "IconOverlay", "IconOverlay2", "IconBorder",
+    "UpgradeIcon", "JunkIcon", "ItemContextOverlay", "searchOverlay", "ExtendedSlot", "flash" }
+QuietTemplate = function(btn)
+    for _, k in ipairs(TEMPLATE_GLOWS) do
+        local t = btn[k]
+        if type(t) == "table" then
+            if t.SetAlpha then t:SetAlpha(0) end
+            if t.Hide then t:Hide() end
+        end
+    end
+    for _, k in ipairs({ "flashAnim", "newitemglowAnim" }) do
+        local a = btn[k]
+        if type(a) == "table" and a.Stop then a:Stop() end
+    end
+end
+
 local function Decorate(btn)
+    -- the game's template paints its own glows (new-item flash, quality, junk, upgrade); Baggie draws its own
+    for _, r in ipairs({ btn:GetRegions() }) do
+        if type(r) == "table" and r.SetAlpha then r:SetAlpha(0) if r.Hide then r:Hide() end end
+    end
+    QuietTemplate(btn)
     -- Baggie draws its own slot, icon and count so it never depends on the template's helpers
     btn.baggieBg = btn:CreateTexture(nil, "BACKGROUND")
     btn.baggieBg:SetTexture("Interface\\Buttons\\WHITE8X8")
