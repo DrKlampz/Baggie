@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.1
+- Theme, border style, layout, gold and counter choices are dropdown menus instead of buttons you click through.
+- New "Show bags" option: a row under your items showing your equipped bag slots. Click a slot to pick up the bag, or drop a bag on it to equip it.
+- Keyring: Baggie now also asks the game's keyring size and says so when the character has no keyring slots. `/baggie debug` prints the keyring numbers.
+
 ## v0.2.0
 - Look customizer: theme presets (dark gold, midnight blue, slate, forest, crimson, parchment) plus color pickers for the window background, border and title, title bar, slot background and item borders.
 - Item borders: by quality (with a minimum quality), one custom color on items, one color on every slot, or none; adjustable thickness. Crisp pixel borders replace the old glow.

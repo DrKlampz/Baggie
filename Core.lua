@@ -26,6 +26,7 @@ B.DEFAULTS = {
     junkDim = true,      -- dim grey items
     point = nil,         -- saved window position
     keyring = false,
+    showBags = true,     -- row of your equipped bag slots under the items
     layout = "real",     -- "real" = bag order, nothing moves; "compact" = items first
     alpha = 0.96,        -- window background opacity
     cellSize = 37,
@@ -76,7 +77,11 @@ function B.NumSlots(bag)
     local n
     if C and C.GetContainerNumSlots then n = C.GetContainerNumSlots(bag)
     elseif _G.GetContainerNumSlots then n = _G.GetContainerNumSlots(bag) end
-    return tonumber(n) or 0
+    n = tonumber(n) or 0
+    if n == 0 and bag == (_G.KEYRING_CONTAINER or -2) and _G.GetKeyRingSize then
+        n = tonumber(_G.GetKeyRingSize()) or 0
+    end
+    return n
 end
 
 local function ItemID(link)
@@ -114,7 +119,8 @@ function B.BagIDs()
     local ids = { 0 }
     local last = tonumber(_G.NUM_BAG_SLOTS) or 4
     for b = 1, last do ids[#ids + 1] = b end
-    if B.db and B.db.keyring and B.NumSlots(-2) > 0 then ids[#ids + 1] = -2 end
+    local K = _G.KEYRING_CONTAINER or -2
+    if B.db and B.db.keyring and B.NumSlots(K) > 0 then ids[#ids + 1] = K end
     return ids
 end
 
@@ -214,6 +220,7 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         else B.Print("usage: /baggie layout real | compact (now " .. B.db.layout .. ")") end
     elseif cmd == "keyring" then
         B.db.keyring = not B.db.keyring refresh() B.Print("keyring " .. (B.db.keyring and "shown" or "hidden"))
+        if B.db.keyring and B.NumSlots(_G.KEYRING_CONTAINER or -2) == 0 then B.Print("this character has no keyring slots to show") end
     elseif cmd == "unpin" and rest == "all" then
         for k in pairs(B.Pins()) do B.Pins()[k] = nil end refresh() B.Print("all saved spots cleared")
     elseif cmd == "pins" or cmd == "list" then

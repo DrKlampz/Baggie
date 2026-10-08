@@ -440,8 +440,9 @@ local function Relayout(slots, text)
 
     F.UpdateOverlays()
     local rows = math.max(1, math.ceil(count / B.db.cols))
+    local bottom = BOTTOM + (B.db.showBags and 30 or 0)
     win:SetSize(PAD * 2 + B.db.cols * (CELL + GAP) - GAP,
-                TOP + rows * (CELL + GAP) - GAP + BOTTOM)
+                TOP + rows * (CELL + GAP) - GAP + bottom)
 end
 
 local function Footer(slots)
@@ -467,6 +468,22 @@ local function Footer(slots)
     win.money:SetText(text)
     win.money:SetShown(B.db.showFooter and gm ~= "none")
     win.hint:Hide()
+    F.UpdateBagBar()
+end
+
+function F.UpdateBagBar()
+    if not win or not win.bagBar then return end
+    win.bagBar:SetShown(B.db.showBags and true or false)
+    if not B.db.showBags then return end
+    for _, b in ipairs(win.bagBtns) do
+        local inv = _G.ContainerIDToInventoryID and _G.ContainerIDToInventoryID(b.bag)
+        local tex = inv and _G.GetInventoryItemTexture and _G.GetInventoryItemTexture("player", inv)
+        if tex then
+            b.icon:SetTexture(tex) b.icon:SetVertexColor(1, 1, 1, 1) b.icon:Show()
+        else
+            b.icon:Hide()
+        end
+    end
 end
 
 function F.Refresh()
@@ -613,6 +630,46 @@ local function Create()
     win.hint:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -50)
     win.hint:Hide()
 
+    -- the equipped bag slots
+    win.bagBar = CreateFrame("Frame", nil, win)
+    win.bagBar:SetSize(160, 26)
+    win.bagBar:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 12, 30)
+    win.bagBtns = {}
+    for i = 1, tonumber(_G.NUM_BAG_SLOTS) or 4 do
+        local b = CreateFrame("Button", nil, win.bagBar)
+        b:SetSize(26, 26)
+        b:SetPoint("LEFT", win.bagBar, "LEFT", (i - 1) * 30, 0)
+        b.bag = i
+        b.bg = b:CreateTexture(nil, "BACKGROUND")
+        b.bg:SetAllPoints(b)
+        b.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+        b.bg:SetVertexColor(0.13, 0.13, 0.16, 1)
+        b.icon = b:CreateTexture(nil, "ARTWORK")
+        b.icon:SetPoint("TOPLEFT", 2, -2) b.icon:SetPoint("BOTTOMRIGHT", -2, 2)
+        b:RegisterForClicks("LeftButtonUp")
+        b:SetScript("OnClick", function(self)
+            local inv = _G.ContainerIDToInventoryID and _G.ContainerIDToInventoryID(self.bag)
+            if not inv or InCombat() then return end
+            if _G.CursorHasItem and _G.CursorHasItem() then
+                if _G.PutItemInBag then _G.PutItemInBag(inv) end
+            elseif _G.PickupBagFromSlot then _G.PickupBagFromSlot(inv) end
+        end)
+        b:SetScript("OnEnter", function(self)
+            if not _G.GameTooltip then return end
+            local inv = _G.ContainerIDToInventoryID and _G.ContainerIDToInventoryID(self.bag)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            if inv and _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", inv) then
+                GameTooltip:SetInventoryItem("player", inv)
+            else
+                GameTooltip:AddLine("Empty bag slot", 0.8, 0.8, 0.8)
+                GameTooltip:AddLine("Drop a bag here to equip it.", 1, 1, 1, true)
+            end
+            GameTooltip:Show()
+        end)
+        b:SetScript("OnLeave", function() if _G.GameTooltip then GameTooltip:Hide() end end)
+        win.bagBtns[i] = b
+    end
+
     win.free = Label(win, 11, 0.8, 0.8, 0.8)
     win.free:SetPoint("BOTTOMLEFT", PAD, 10)
     win.money = Label(win, 11, 1, 0.85, 0.4)
@@ -649,6 +706,9 @@ function F.Debug()
     local parts = {}
     for _, bag in ipairs(ids) do parts[#parts + 1] = bag .. "=" .. B.NumSlots(bag) end
     P("bag sizes: " .. table.concat(parts, " ") .. "  (NUM_BAG_SLOTS=" .. T(_G.NUM_BAG_SLOTS) .. ")")
+    local K = _G.KEYRING_CONTAINER or -2
+    P(("keyring: container %s slots %d  GetKeyRingSize=%s  enabled=%s"):format(T(K), B.NumSlots(K),
+      T(_G.GetKeyRingSize and _G.GetKeyRingSize() or "n/a"), T(B.db.keyring)))
     local slots = B.ScanSlots()
     local items = 0
     for _, s in ipairs(slots) do if s.itemID then items = items + 1 end end

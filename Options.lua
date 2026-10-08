@@ -56,7 +56,7 @@ local ROWS = {
     { h = "Items" },
     { key = "junkDim", kind = "check", label = "Dim grey items" },
     { key = "ilvl", kind = "check", label = "Show item level on gear" },
-    { key = "keyring", kind = "check", label = "Show keyring" },
+    { key = "keyring", kind = "check", label = "Show keyring (if this character has one)" },
 
     { h = "Saved spots" },
     { key = "showPinMark", kind = "check", label = "Gold mark on saved items" },
@@ -64,6 +64,7 @@ local ROWS = {
     { key = "sharedPins", kind = "check", label = "Share saved spots across characters" },
 
     { h = "Window" },
+    { key = "showBags", kind = "check", label = "Show bags (your equipped bag slots)" },
     { key = "showSearch", kind = "check", label = "Search box" },
     { key = "showSort", kind = "check", label = "Sort button (only sorts when clicked)" },
     { key = "lockPos", kind = "check", label = "Lock window position" },
@@ -115,15 +116,90 @@ local function PickColor(key, done)
     end
 end
 
-local function Sync()
+local menu, catcher
+
+local function CloseMenu()
+    if menu then menu:Hide() end
+    if catcher then catcher:Hide() end
+end
+
+local function Label(row, v)
+    if row.preset then return PRESETS[v] and PRESETS[v].name or tostring(v) end
+    return (row.names and row.names[v]) or tostring(v)
+end
+
+local Sync
+
+function O.OpenDropdown(anchor, row)
+    if menu and menu:IsShown() and menu.row == row then CloseMenu() return end
+    if not catcher then
+        catcher = CreateFrame("Button", nil, UIParent)
+        catcher:SetAllPoints(UIParent)
+        catcher:SetFrameStrata("FULLSCREEN")
+        catcher:SetScript("OnClick", CloseMenu)
+        catcher:Hide()
+    end
+    if not menu then
+        menu = CreateFrame("Frame", "BaggieDropdown", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        menu:SetFrameStrata("FULLSCREEN_DIALOG")
+        menu:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+        menu:SetBackdropColor(0.07, 0.07, 0.09, 1)
+        menu:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.9)
+        menu.items = {}
+        menu:Hide()
+    end
+    menu.row = row
+    local cur = B.db[row.key]
+    local n = #row.values
+    menu:SetSize(anchor:GetWidth() or 300, n * 22 + 6)
+    menu:ClearAllPoints()
+    menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -1)
+    for i = 1, math.max(n, #menu.items) do
+        local it = menu.items[i]
+        if i <= n then
+            if not it then
+                it = CreateFrame("Button", nil, menu)
+                it:SetHeight(22)
+                it.hl = it:CreateTexture(nil, "BACKGROUND")
+                it.hl:SetAllPoints(it)
+                it.hl:SetTexture("Interface\\Buttons\\WHITE8X8")
+                it.hl:SetVertexColor(1, 1, 1, 0.12)
+                it.hl:Hide()
+                it.text = it:CreateFontString(nil, "OVERLAY")
+                it.text:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+                it.text:SetPoint("LEFT", 8, 0)
+                it:SetScript("OnEnter", function(self) self.hl:Show() end)
+                it:SetScript("OnLeave", function(self) self.hl:Hide() end)
+                menu.items[i] = it
+            end
+            it:ClearAllPoints()
+            it:SetPoint("TOPLEFT", menu, "TOPLEFT", 3, -3 - (i - 1) * 22)
+            it:SetPoint("TOPRIGHT", menu, "TOPRIGHT", -3, -3 - (i - 1) * 22)
+            local v = row.values[i]
+            it.text:SetText(Label(row, v))
+            if v == cur then it.text:SetTextColor(GOLD[1], GOLD[2], GOLD[3]) else it.text:SetTextColor(1, 1, 1) end
+            it:SetScript("OnClick", function()
+                if row.preset then O.ApplyPreset(v) else B.db[row.key] = v end
+                CloseMenu()
+                Sync() Apply()
+            end)
+            it:Show()
+        elseif it then
+            it:Hide()
+        end
+    end
+    catcher:Show()
+    menu:Show()
+end
+
+Sync = function()
     for _, w in ipairs(widgets) do
         local row, v = w.row, B.db[w.row.key]
         if row.kind == "check" then w.f:SetChecked(v and true or false)
         elseif row.kind == "slider" then w.f:SetValue(tonumber(v) or row.min)
         elseif row.kind == "cycle" then
-            local label = row.names and row.names[v]
-            if row.preset then label = PRESETS[v] and PRESETS[v].name end
-            w.f:SetText(label or tostring(v))
+            w.f:SetText(Label(row, v))
         elseif row.kind == "color" then
             local c = v or B.DEFAULTS[row.key]
             w.f.tex:SetVertexColor(c[1], c[2], c[3], 1)
@@ -214,20 +290,15 @@ local function Build()
             lbl:SetPoint("TOPLEFT", 8, y - 3)
             lbl:SetText(row.label)
             local b = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
-            b:SetSize(300, 20)
+            b:SetSize(300, 22)
             b:SetPoint("TOPLEFT", 6, y - 20)
-            b:SetScript("OnClick", function()
-                local cur = B.db[row.key]
-                local nextv
-                for i, v in ipairs(row.values) do
-                    if v == cur then nextv = row.values[i % #row.values + 1] break end
-                end
-                nextv = nextv or row.values[1]
-                if row.preset then O.ApplyPreset(nextv) else B.db[row.key] = nextv end
-                Sync() Apply()
-            end)
+            local arrow = b:CreateTexture(nil, "OVERLAY")
+            arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+            arrow:SetSize(14, 14)
+            arrow:SetPoint("RIGHT", b, "RIGHT", -6, 0)
+            b:SetScript("OnClick", function(self) O.OpenDropdown(self, row) end)
             widgets[#widgets + 1] = { row = row, f = b }
-            y = y - 46
+            y = y - 48
         elseif row.kind == "color" then
             local sw = CreateFrame("Button", nil, body)
             sw:SetSize(22, 22)
@@ -270,7 +341,8 @@ local function Build()
         for k in pairs(B.Pins()) do B.Pins()[k] = nil end
         Apply() B.Print("all saved spots cleared")
     end)
-    win:SetScript("OnShow", Sync)
+    win:SetScript("OnShow", function() Sync() end)
+    win:SetScript("OnHide", CloseMenu)
     win:Hide()
 end
 
