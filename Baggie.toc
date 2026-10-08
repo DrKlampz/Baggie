@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: |cffe0b04aBaggie|r
+## Notes: One bag window for WoW: Forever where you choose where items sit. Save an item to a spot and it stays there. Slash command: /baggie
+## Author: David
+## Version: @project-version@
+## Category: Inventory
+## IconTexture: Interface\AddOns\Baggie\Media\Icon
+## SavedVariables: BaggieDB
+## X-License: MIT
+
+Core.lua
+Layout.lua
+Frame.lua
