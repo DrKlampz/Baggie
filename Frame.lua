@@ -166,11 +166,11 @@ function F.CellClick(c, mouse)
     end
     icon = icon or (pins[id] and pins[id].icon)
     name = name or (pins[id] and pins[id].name)
-    local other, freed = B.Layout.Place(pins, id, c)
+    local other, freed = B.Layout.Place(pins, id, c, pick.cell)
     if icon then pins[id].icon = icon end
     if name then pins[id].name = name end
     pick = nil
-    if freed then B.Print("that spot belonged to another item, which is now free") end
+    if other and not freed then B.Print("swapped the two saved spots") end
     F.Refresh()
 end
 

@@ -171,8 +171,8 @@ end
 -- Moves (or swaps) a saved spot. Returns the new pins table entries it changed.
 -- pins[itemID] = { cell = n, ... }. target is a cell number. If another item is saved
 -- there and the moved item already had a spot, the two swap; otherwise the other is freed.
-function L.Place(pins, itemID, target)
-    local old = pins[itemID] and pins[itemID].cell
+function L.Place(pins, itemID, target, from)
+    local old = (pins[itemID] and pins[itemID].cell) or from
     local other
     for id, p in pairs(pins) do
         if id ~= itemID and p.cell == target then other = id end
