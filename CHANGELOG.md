@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.3
+- Fixes the bag row saying your bag slots are empty: newer game versions moved the bag-slot lookup, so Baggie now uses the new one and falls back to the standard slot numbers.
+- A "Search:" label sits next to the search box.
+
 ## v0.2.2
 - The reagent bag and the keyring now sit in their own labeled sections under your main bags, kept apart from the backpack and bag slots. Options: "Show reagent bag", "Show keyring" and "Label and separate those sections".
 - The bag row also shows the reagent bag slot (set apart from the others) on games that have one.

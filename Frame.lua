@@ -528,7 +528,7 @@ function F.UpdateBagBar()
     win.bagBar:SetShown(B.db.showBags and true or false)
     if not B.db.showBags then return end
     for _, b in ipairs(win.bagBtns) do
-        local inv = _G.ContainerIDToInventoryID and _G.ContainerIDToInventoryID(b.bag)
+        local inv = B.BagInvID(b.bag)
         local tex = inv and _G.GetInventoryItemTexture and _G.GetInventoryItemTexture("player", inv)
         if tex then
             b.icon:SetTexture(tex) b.icon:SetVertexColor(1, 1, 1, 1) b.icon:Show()
@@ -595,6 +595,7 @@ function F.ApplyLook()
     win.free:SetFont("Fonts\\FRIZQT__.TTF", fs, "")
     win.money:SetFont("Fonts\\FRIZQT__.TTF", fs, "")
     win.search:SetShown(B.db.showSearch)
+    win.searchLabel:SetShown(B.db.showSearch)
     local hasSort = (_G.C_Container and _G.C_Container.SortBags) or _G.SortBags
     win.sortBtn:SetShown(B.db.showSort and hasSort and true or false)
     win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
@@ -662,6 +663,10 @@ local function Create()
     win.search:SetScript("OnEscapePressed", function(self) self:SetText("") self:ClearFocus() end)
     win.search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
 
+    win.searchLabel = Label(win, 11, 0.8, 0.8, 0.8)
+    win.searchLabel:SetPoint("RIGHT", win.search, "LEFT", -6, 0)
+    win.searchLabel:SetText("Search:")
+
     win.sortBtn = Button(win, "Sort", 46, function()
         local c = _G.C_Container
         if c and c.SortBags then c.SortBags() elseif _G.SortBags then _G.SortBags() end
@@ -700,7 +705,7 @@ local function Create()
         b.icon:SetPoint("TOPLEFT", 2, -2) b.icon:SetPoint("BOTTOMRIGHT", -2, 2)
         b:RegisterForClicks("LeftButtonUp")
         b:SetScript("OnClick", function(self)
-            local inv = _G.ContainerIDToInventoryID and _G.ContainerIDToInventoryID(self.bag)
+            local inv = B.BagInvID(self.bag)
             if not inv or InCombat() then return end
             if _G.CursorHasItem and _G.CursorHasItem() then
                 if _G.PutItemInBag then _G.PutItemInBag(inv) end
@@ -708,7 +713,7 @@ local function Create()
         end)
         b:SetScript("OnEnter", function(self)
             if not _G.GameTooltip then return end
-            local inv = _G.ContainerIDToInventoryID and _G.ContainerIDToInventoryID(self.bag)
+            local inv = B.BagInvID(self.bag)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             if inv and _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", inv) then
                 GameTooltip:SetInventoryItem("player", inv)

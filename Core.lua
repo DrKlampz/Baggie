@@ -125,6 +125,14 @@ function B.BagIDs()
     return ids
 end
 
+-- inventory slot number of an equipped bag (the game moved this function into C_Container)
+function B.BagInvID(bag)
+    local f = (C and C.ContainerIDToInventoryID) or _G.ContainerIDToInventoryID
+    local id = f and f(bag)
+    if tonumber(id) then return id end
+    return 19 + bag
+end
+
 function B.ReagentBagID()
     local e = _G.Enum and _G.Enum.BagIndex
     if e and e.ReagentBag then return e.ReagentBag end
