@@ -138,37 +138,24 @@ end
 
 function F.CellClick(c, mouse)
     if not c then return end
+    local pins = B.Pins()
+    local id, kind = ContentAt(c)
     if mouse == "RightButton" then
-        local id = PinnedItemAtCell(c)
-        if id then
-            local name = B.Pins()[id].name or "item"
-            B.ClearPin(id)
-            pick = nil
+        local held = PinnedItemAtCell(c)
+        if held then
+            local name = pins[held].name or "item"
+            B.ClearPin(held)
             B.Print("freed the saved spot for " .. name)
             F.Refresh()
         end
         return
     end
-    if not pick then
-        local id = ContentAt(c)
-        if not id then B.Print("pick an item first, then click where it should sit") return end
-        pick = { itemID = id, cell = c }
-        F.Refresh()
-        return
-    end
-    local pins = B.Pins()
-    local id = pick.itemID
-    local there, kind = ContentAt(c)
-    if there and kind == "slot" and there ~= id then
-        pick = nil
-        B.Print("that slot has another item in it. Save to an empty slot so nothing gets moved.")
-        F.Refresh()
-        return
-    end
-    local holder = PinnedItemAtCell(c)
-    if holder and holder ~= id then
-        pick = nil
-        B.Print("that spot is saved for " .. (pins[holder].name or "another item") .. ". Alt+right-click it to free it first.")
+    -- left click: save the item that is in this spot, to this spot (click again to free it)
+    if not id then B.Print("Alt+click an item to save it to the spot it is in.") return end
+    if kind == "ghost" or (pins[id] and pins[id].cell == c) then
+        local name = pins[id] and pins[id].name or "item"
+        B.ClearPin(id)
+        B.Print("freed the saved spot for " .. name)
         F.Refresh()
         return
     end
@@ -179,12 +166,15 @@ function F.CellClick(c, mouse)
             icon, name = tex, ItemName(s.link) break
         end
     end
-    icon = icon or (pins[id] and pins[id].icon)
-    name = name or (pins[id] and pins[id].name)
-    local other, freed = B.Layout.Place(pins, id, c, pick.cell)
+    local holder = PinnedItemAtCell(c)
+    if holder and holder ~= id then
+        B.Print("that spot is saved for " .. (pins[holder].name or "another item") .. ". Alt+click its empty spot to free it first.")
+        return
+    end
+    B.Layout.Place(pins, id, c)
     if icon then pins[id].icon = icon end
     if name then pins[id].name = name end
-    pick = nil
+    B.Print("saved " .. (name or "item") .. " to this spot")
     F.Refresh()
 end
 
@@ -357,7 +347,7 @@ local function GetGhost(c)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(self.name or "Saved spot", GOLD[1], GOLD[2], GOLD[3])
         GameTooltip:AddLine("Saved spot. Drop one here and it sits here.", 1, 1, 1, true)
-        GameTooltip:AddLine("Alt+right-click to free this spot.", 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine("Alt+click to free this spot.", 0.7, 0.7, 0.7, true)
         GameTooltip:Show()
     end)
     g:SetScript("OnLeave", function() if _G.GameTooltip then GameTooltip:Hide() end end)
@@ -430,9 +420,8 @@ local function Footer(slots)
         text = ("%dg %ds %dc"):format(math.floor(money / 10000), math.floor(money / 100) % 100, money % 100)
     end
     win.money:SetText(text)
-    win.hint:SetShown(editMode or pick ~= nil)
-    if pick then win.hint:SetText("Now click the cell where it should sit.  Esc cancels.")
-    else win.hint:SetText("Pin mode: click an item, then click its spot.  Right-click frees a spot.") end
+    win.hint:SetShown(editMode)
+    win.hint:SetText("Pin mode: click an item to save it to its spot. Click it again to free it.")
 end
 
 function F.Refresh()

@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.7
+- Saving is one click now: Alt+click an item and it is saved to the spot it is sitting in. Alt+click it again (or its empty spot) to free it. The Pin button works the same without Alt. No more picking a target cell.
+
 ## v0.1.6
 - Saving an item only works on an empty slot now. Clicking a slot that already holds another item is refused with a message, so saving never shuffles your other items around.
 

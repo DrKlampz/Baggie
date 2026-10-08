@@ -204,7 +204,7 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         for id, p in pairs(B.Pins()) do
             n = n + 1 B.Print(("cell %d: %s (%d)"):format(p.cell or 0, p.name or "item", id))
         end
-        if n == 0 then B.Print("no saved spots yet. Alt+click an item, then Alt+click a cell.") end
+        if n == 0 then B.Print("no saved spots yet. Alt+click an item to save its spot.") end
     elseif cmd == "debug" then
         B.Frame.Debug()
     elseif cmd == "default" then
@@ -214,8 +214,8 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.db.point = nil B.Frame.ResetPosition() B.Print("window position reset")
     else
         B.Print("/baggie  open or close your bags")
-        B.Print("Alt+click an item, then Alt+click any cell to save the item to that spot.")
-        B.Print("Alt+right-click a saved cell to free it. The Pin button does the same without Alt.")
+        B.Print("Alt+click an item to save it to the spot it is in. Alt+click it again to free the spot.")
+        B.Print("The Pin button does the same without holding Alt.")
         B.Print("/baggie debug (prints what Baggie sees, for bug reports)")
         B.Print("/baggie options  (all settings in a window)")
         B.Print("/baggie layout real | compact   (real = bag order, nothing moves on its own)")
