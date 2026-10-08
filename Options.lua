@@ -56,7 +56,10 @@ local ROWS = {
     { h = "Items" },
     { key = "junkDim", kind = "check", label = "Dim grey items" },
     { key = "ilvl", kind = "check", label = "Show item level on gear" },
+    { h = "Extra bags (shown as their own sections)" },
+    { key = "showReagent", kind = "check", label = "Show reagent bag (if this game has one)" },
     { key = "keyring", kind = "check", label = "Show keyring (if this character has one)" },
+    { key = "sectionLabels", kind = "check", label = "Label and separate those sections" },
 
     { h = "Saved spots" },
     { key = "showPinMark", kind = "check", label = "Gold mark on saved items" },

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.2
+- The reagent bag and the keyring now sit in their own labeled sections under your main bags, kept apart from the backpack and bag slots. Options: "Show reagent bag", "Show keyring" and "Label and separate those sections".
+- The bag row also shows the reagent bag slot (set apart from the others) on games that have one.
+- Saved spots apply to the main bags only.
+
 ## v0.2.1
 - Theme, border style, layout, gold and counter choices are dropdown menus instead of buttons you click through.
 - New "Show bags" option: a row under your items showing your equipped bag slots. Click a slot to pick up the bag, or drop a bag on it to equip it.

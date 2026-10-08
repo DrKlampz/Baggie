@@ -26,6 +26,8 @@ B.DEFAULTS = {
     junkDim = true,      -- dim grey items
     point = nil,         -- saved window position
     keyring = false,
+    showReagent = true,  -- reagent bag as its own section (if the game has one)
+    sectionLabels = true,
     showBags = true,     -- row of your equipped bag slots under the items
     layout = "real",     -- "real" = bag order, nothing moves; "compact" = items first
     alpha = 0.96,        -- window background opacity
@@ -115,13 +117,35 @@ function B.Cooldown(bag, slot)
     if _G.GetContainerItemCooldown then return _G.GetContainerItemCooldown(bag, slot) end
 end
 
+-- the main bags: backpack plus the four bag slots (saved spots live here)
 function B.BagIDs()
     local ids = { 0 }
     local last = tonumber(_G.NUM_BAG_SLOTS) or 4
     for b = 1, last do ids[#ids + 1] = b end
-    local K = _G.KEYRING_CONTAINER or -2
-    if B.db and B.db.keyring and B.NumSlots(K) > 0 then ids[#ids + 1] = K end
     return ids
+end
+
+function B.ReagentBagID()
+    local e = _G.Enum and _G.Enum.BagIndex
+    if e and e.ReagentBag then return e.ReagentBag end
+    if tonumber(_G.NUM_REAGENTBAG_SLOTS) and _G.NUM_REAGENTBAG_SLOTS > 0 then
+        return (tonumber(_G.NUM_BAG_SLOTS) or 4) + 1
+    end
+end
+
+-- the reagent bag and the keyring are shown as their own sections under the main bags
+function B.ExtraSections()
+    local out = {}
+    if not B.db then return out end
+    local r = B.ReagentBagID()
+    if B.db.showReagent and r and B.NumSlots(r) > 0 then
+        out[#out + 1] = { key = "reagent", title = "Reagent bag", bags = { r } }
+    end
+    local K = _G.KEYRING_CONTAINER or -2
+    if B.db.keyring and B.NumSlots(K) > 0 then
+        out[#out + 1] = { key = "keyring", title = "Keyring", bags = { K } }
+    end
+    return out
 end
 
 -- The real slots in bag order, as the layout engine wants them.

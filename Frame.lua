@@ -160,7 +160,7 @@ local function PinnedItemAtCell(c)
 end
 
 function F.CellClick(c, mouse)
-    if not c then return end
+    if not c then B.Print("saved spots only work in the main bags, not the reagent bag or keyring.") return end
     local pins = B.Pins()
     local id, kind = ContentAt(c)
     if mouse == "RightButton" then
@@ -392,6 +392,58 @@ local function CellPosition(c)
     return PAD + col * (CELL + GAP), -(TOP + row * (CELL + GAP))
 end
 
+local sectionHeaders = {}
+
+-- reagent bag and keyring: their own labeled grids under the main bags, in real order
+local function PlaceSections(startY, inset)
+    for _, h in pairs(sectionHeaders) do h.text:Hide() h.line:Hide() end
+    local y = startY
+    for _, sec in ipairs(B.ExtraSections()) do
+        y = y + 8
+        if B.db.sectionLabels then
+            local h = sectionHeaders[sec.key]
+            if not h then
+                h = { text = win:CreateFontString(nil, "OVERLAY"), line = win:CreateTexture(nil, "ARTWORK") }
+                h.text:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+                h.line:SetTexture("Interface\\Buttons\\WHITE8X8")
+                sectionHeaders[sec.key] = h
+            end
+            local e = B.db.edgeColor or B.DEFAULTS.edgeColor
+            h.text:SetTextColor(e[1], e[2], e[3])
+            h.text:SetText(sec.title)
+            h.text:ClearAllPoints() h.text:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y)
+            h.line:SetVertexColor(e[1], e[2], e[3], 0.5)
+            h.line:ClearAllPoints()
+            h.line:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -(y - 14))
+            h.line:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -(y - 14))
+            h.line:SetHeight(1)
+            h.text:Show() h.line:Show()
+            y = y + 18
+        end
+        local n = 0
+        for _, bag in ipairs(sec.bags) do
+            for slot = 1, B.NumSlots(bag) do
+                local btn = GetButton(bag, slot)
+                local col, row = n % B.db.cols, math.floor(n / B.db.cols)
+                n = n + 1
+                btn.cell = nil
+                btn:SetSize(CELL, CELL)
+                if btn.inset ~= inset then
+                    btn.inset = inset
+                    btn.baggieIcon:ClearAllPoints()
+                    btn.baggieIcon:SetPoint("TOPLEFT", inset, -inset)
+                    btn.baggieIcon:SetPoint("BOTTOMRIGHT", -inset, inset)
+                end
+                btn:ClearAllPoints()
+                btn:SetPoint("TOPLEFT", win, "TOPLEFT", PAD + col * (CELL + GAP), -(y + row * (CELL + GAP)))
+                btn:Show()
+            end
+        end
+        y = y + math.ceil(n / B.db.cols) * (CELL + GAP) - GAP
+    end
+    return y
+end
+
 local function Relayout(slots, text)
     local pins = B.Pins()
     CELL = math.max(24, math.min(56, tonumber(B.db.cellSize) or 37))
@@ -441,8 +493,8 @@ local function Relayout(slots, text)
     F.UpdateOverlays()
     local rows = math.max(1, math.ceil(count / B.db.cols))
     local bottom = BOTTOM + (B.db.showBags and 30 or 0)
-    win:SetSize(PAD * 2 + B.db.cols * (CELL + GAP) - GAP,
-                TOP + rows * (CELL + GAP) - GAP + bottom)
+    local endY = PlaceSections(TOP + rows * (CELL + GAP) - GAP, inset)
+    win:SetSize(PAD * 2 + B.db.cols * (CELL + GAP) - GAP, endY + bottom)
 end
 
 local function Footer(slots)
@@ -632,7 +684,7 @@ local function Create()
 
     -- the equipped bag slots
     win.bagBar = CreateFrame("Frame", nil, win)
-    win.bagBar:SetSize(160, 26)
+    win.bagBar:SetSize(190, 26)
     win.bagBar:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 12, 30)
     win.bagBtns = {}
     for i = 1, tonumber(_G.NUM_BAG_SLOTS) or 4 do
@@ -668,6 +720,26 @@ local function Create()
         end)
         b:SetScript("OnLeave", function() if _G.GameTooltip then GameTooltip:Hide() end end)
         win.bagBtns[i] = b
+    end
+
+    local rb = B.ReagentBagID()
+    if rb then
+        local last = win.bagBtns[#win.bagBtns]
+        local b = CreateFrame("Button", nil, win.bagBar)
+        b:SetSize(26, 26)
+        b:SetPoint("LEFT", last, "RIGHT", 14, 0)
+        b.bag = rb
+        b.bg = b:CreateTexture(nil, "BACKGROUND")
+        b.bg:SetAllPoints(b)
+        b.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+        b.bg:SetVertexColor(0.13, 0.13, 0.16, 1)
+        b.icon = b:CreateTexture(nil, "ARTWORK")
+        b.icon:SetPoint("TOPLEFT", 2, -2) b.icon:SetPoint("BOTTOMRIGHT", -2, 2)
+        b:RegisterForClicks("LeftButtonUp")
+        b:SetScript("OnClick", last:GetScript("OnClick"))
+        b:SetScript("OnEnter", last:GetScript("OnEnter"))
+        b:SetScript("OnLeave", last:GetScript("OnLeave"))
+        win.bagBtns[#win.bagBtns + 1] = b
     end
 
     win.free = Label(win, 11, 0.8, 0.8, 0.8)
