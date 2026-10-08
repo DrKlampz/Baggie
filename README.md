@@ -7,8 +7,7 @@ Your backpack and bags open in a single window. Save an item to a spot and it st
 ## Saving an item to a spot
 
 - **Alt+click** an item to save it to the spot it is in. Alt+click it again to free the spot.
-- Or press the **Pin** button, click an item, then click its spot. Click Pin again to leave pin mode.
-- The Pin button does the same without holding Alt.
+- Or press the **Pin** button and click items instead of holding Alt. Click Pin again to leave pin mode.
 - Dropping an item on a faded spot puts it in your first empty bag slot, and it shows up in the saved spot.
 - A small gold mark on an item means it has a saved spot. Spots are saved per character, by item (so every stack of Hearthstone lands in the same cell).
 
