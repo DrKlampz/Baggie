@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.6
+- Saving an item only works on an empty slot now. Clicking a slot that already holds another item is refused with a message, so saving never shuffles your other items around.
+
 ## v0.1.5
 - Stops the blue glow on slots after /reload. That was the game's own "new item" glow from its button template; Baggie now silences all of the template's glows and draws only its own.
 

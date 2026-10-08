@@ -158,6 +158,13 @@ function F.CellClick(c, mouse)
     end
     local pins = B.Pins()
     local id = pick.itemID
+    local there, kind = ContentAt(c)
+    if there and kind == "slot" and there ~= id then
+        pick = nil
+        B.Print("that slot has another item in it. Save to an empty slot so nothing gets moved.")
+        F.Refresh()
+        return
+    end
     local holder = PinnedItemAtCell(c)
     if holder and holder ~= id then
         pick = nil
