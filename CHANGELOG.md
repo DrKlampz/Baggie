@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.0
+- Look customizer: theme presets (dark gold, midnight blue, slate, forest, crimson, parchment) plus color pickers for the window background, border and title, title bar, slot background and item borders.
+- Item borders: by quality (with a minimum quality), one custom color on items, one color on every slot, or none; adjustable thickness. Crisp pixel borders replace the old glow.
+- Sizes: slot size, icon padding inside slots, space between slots, window padding.
+- Bottom line: choose how gold shows (coin icons, colored g/s/c, gold only, hidden), how the slot counter shows (used / total, free of total, free only, hidden) and its text size.
+- The Pin button is gone. Alt+click an item saves its spot, Alt+click again frees it.
+
 ## v0.1.7
 - Saving is one click now: Alt+click an item and it is saved to the spot it is sitting in. Alt+click it again (or its empty spot) to free it. The Pin button works the same without Alt. No more picking a target cell.
 

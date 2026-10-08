@@ -8,7 +8,21 @@ B.DEFAULTS = {
     enabled = true,      -- replace the default bag windows
     cols = 10,           -- cells per row
     scale = 1,
-    borders = true,      -- quality colored borders
+    borderMode = "quality", -- quality | custom | slots | none
+    borderMinQuality = 2,   -- quality borders start at this quality (2 = uncommon)
+    borderSize = 1,
+    borderColor = { 1, 1, 1 },
+    gap = 4,                -- space between slots
+    padding = 12,           -- space between slots and the window edge
+    iconInset = 2,          -- space between a slot's edge and its icon
+    preset = "gold",
+    bgColor = { 0.05, 0.05, 0.07 },
+    edgeColor = { 0.88, 0.69, 0.29 },
+    titleColor = { 0.13, 0.11, 0.07 },
+    slotColor = { 0.13, 0.13, 0.16 },
+    counterMode = "used",   -- used | free | freeonly | none
+    goldMode = "icons",     -- icons | text | gold | none
+    footerSize = 11,
     junkDim = true,      -- dim grey items
     point = nil,         -- saved window position
     keyring = false,
@@ -162,6 +176,8 @@ B.On("ADDON_LOADED", B.Safe("load", function(name)
     if name ~= ADDON_NAME then return end
     BaggieDB = BaggieDB or {}
     B.db = Merge(BaggieDB, B.DEFAULTS)
+    if B.db.borders == false then B.db.borderMode = "none" end   -- older versions
+    B.db.borders = nil
     if B.Frame and B.Frame.Setup then B.Frame.Setup() end
 end))
 
@@ -189,7 +205,8 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         if n and n >= 0.6 and n <= 1.6 then B.db.scale = n B.Frame.ApplyScale() B.Print("scale: " .. n)
         else B.Print("usage: /baggie scale 0.6-1.6 (now " .. B.db.scale .. ")") end
     elseif cmd == "borders" then
-        B.db.borders = not B.db.borders refresh() B.Print("quality borders " .. (B.db.borders and "on" or "off"))
+        B.db.borderMode = (B.db.borderMode == "none") and "quality" or "none" refresh()
+        B.Print("item borders: " .. B.db.borderMode)
     elseif cmd == "options" or cmd == "config" or cmd == "opt" then
         B.Options.Toggle()
     elseif cmd == "layout" then
@@ -215,8 +232,7 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
     else
         B.Print("/baggie  open or close your bags")
         B.Print("Alt+click an item to save it to the spot it is in. Alt+click it again to free the spot.")
-        B.Print("The Pin button does the same without holding Alt.")
-        B.Print("/baggie debug (prints what Baggie sees, for bug reports)")
+                B.Print("/baggie debug (prints what Baggie sees, for bug reports)")
         B.Print("/baggie options  (all settings in a window)")
         B.Print("/baggie layout real | compact   (real = bag order, nothing moves on its own)")
         B.Print("/baggie pins | unpin all | cols N | scale N | borders | keyring | default | reset")

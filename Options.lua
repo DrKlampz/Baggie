@@ -1,33 +1,79 @@
--- Baggie options window.
+-- Baggie options window: layout, sizes, colors, borders, footer, vendor helpers.
 local ADDON_NAME, B = ...
 local O = {}
 B.Options = O
 local GOLD = { 0.88, 0.69, 0.29 }
 local win
 
--- kind: check | slider | cycle
+local PRESETS = {
+    gold     = { name = "Dark gold",     bg = { 0.05, 0.05, 0.07 }, edge = { 0.88, 0.69, 0.29 }, title = { 0.13, 0.11, 0.07 }, slot = { 0.13, 0.13, 0.16 } },
+    midnight = { name = "Midnight blue", bg = { 0.04, 0.06, 0.12 }, edge = { 0.35, 0.55, 0.95 }, title = { 0.08, 0.12, 0.24 }, slot = { 0.10, 0.14, 0.24 } },
+    slate    = { name = "Slate",         bg = { 0.10, 0.10, 0.11 }, edge = { 0.60, 0.60, 0.65 }, title = { 0.17, 0.17, 0.19 }, slot = { 0.17, 0.17, 0.19 } },
+    forest   = { name = "Forest",        bg = { 0.04, 0.09, 0.06 }, edge = { 0.45, 0.80, 0.40 }, title = { 0.08, 0.16, 0.10 }, slot = { 0.09, 0.17, 0.12 } },
+    crimson  = { name = "Crimson",       bg = { 0.09, 0.04, 0.05 }, edge = { 0.85, 0.25, 0.30 }, title = { 0.20, 0.07, 0.09 }, slot = { 0.17, 0.09, 0.10 } },
+    light    = { name = "Parchment",     bg = { 0.85, 0.82, 0.75 }, edge = { 0.45, 0.35, 0.20 }, title = { 0.70, 0.64, 0.50 }, slot = { 0.70, 0.66, 0.58 } },
+}
+local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "light" }
+O.PRESETS = PRESETS
+
+local function Copy(t) return { t[1], t[2], t[3] } end
+
+function O.ApplyPreset(id)
+    local p = PRESETS[id]
+    if not p then return end
+    B.db.preset = id
+    B.db.bgColor, B.db.edgeColor = Copy(p.bg), Copy(p.edge)
+    B.db.titleColor, B.db.slotColor = Copy(p.title), Copy(p.slot)
+end
+
+-- kind: check | slider | cycle | color
 local ROWS = {
     { h = "Layout" },
     { key = "layout", kind = "cycle", label = "Item layout", values = { "real", "compact" },
       names = { real = "Bag order (nothing moves)", compact = "Compact (items first)" } },
     { key = "cols", kind = "slider", label = "Columns", min = 4, max = 24, step = 1 },
-    { key = "cellSize", kind = "slider", label = "Slot size", min = 28, max = 52, step = 1 },
     { key = "scale", kind = "slider", label = "Window scale", min = 0.6, max = 1.6, step = 0.05, fmt = "%.2f" },
+    { key = "cellSize", kind = "slider", label = "Slot size", min = 28, max = 56, step = 1 },
+    { key = "iconInset", kind = "slider", label = "Icon padding inside slot", min = 0, max = 10, step = 1 },
+    { key = "gap", kind = "slider", label = "Space between slots", min = 0, max = 16, step = 1 },
+    { key = "padding", kind = "slider", label = "Window padding", min = 4, max = 30, step = 1 },
+
+    { h = "Colors" },
+    { key = "preset", kind = "cycle", label = "Theme", values = PRESET_ORDER, preset = true },
+    { key = "bgColor", kind = "color", label = "Window background" },
     { key = "alpha", kind = "slider", label = "Background opacity", min = 0.2, max = 1, step = 0.02, fmt = "%.2f" },
+    { key = "edgeColor", kind = "color", label = "Window border and title" },
+    { key = "titleColor", kind = "color", label = "Title bar" },
+    { key = "slotColor", kind = "color", label = "Slot background" },
+
+    { h = "Item borders" },
+    { key = "borderMode", kind = "cycle", label = "Border style", values = { "quality", "custom", "slots", "none" },
+      names = { quality = "By item quality", custom = "One color, items only", slots = "One color, every slot", none = "None" } },
+    { key = "borderColor", kind = "color", label = "Border color (one-color styles)" },
+    { key = "borderSize", kind = "slider", label = "Border thickness", min = 1, max = 4, step = 1 },
+    { key = "borderMinQuality", kind = "slider", label = "Quality borders start at (2 = green)", min = 0, max = 5, step = 1 },
+
     { h = "Items" },
-    { key = "borders", kind = "check", label = "Quality colored borders" },
     { key = "junkDim", kind = "check", label = "Dim grey items" },
     { key = "ilvl", kind = "check", label = "Show item level on gear" },
     { key = "keyring", kind = "check", label = "Show keyring" },
+
     { h = "Saved spots" },
     { key = "showPinMark", kind = "check", label = "Gold mark on saved items" },
     { key = "ghostAlpha", kind = "slider", label = "Empty saved spot opacity", min = 0.1, max = 0.9, step = 0.05, fmt = "%.2f" },
     { key = "sharedPins", kind = "check", label = "Share saved spots across characters" },
+
     { h = "Window" },
     { key = "showSearch", kind = "check", label = "Search box" },
-    { key = "showFooter", kind = "check", label = "Free slots and money" },
-    { key = "showSort", kind = "check", label = "Sort button (manual, only when clicked)" },
+    { key = "showSort", kind = "check", label = "Sort button (only sorts when clicked)" },
     { key = "lockPos", kind = "check", label = "Lock window position" },
+    { key = "showFooter", kind = "check", label = "Show the bottom line (slots and gold)" },
+    { key = "counterMode", kind = "cycle", label = "Slot counter", values = { "used", "free", "freeonly", "none" },
+      names = { used = "Used / total  (32 / 60)", free = "Free of total  (28 free of 60)", freeonly = "Free only  (28 free)", none = "Hidden" } },
+    { key = "goldMode", kind = "cycle", label = "Gold display", values = { "icons", "text", "gold", "none" },
+      names = { icons = "Coin icons", text = "Colored 12g 34s 56c", gold = "Gold only  (1,234g)", none = "Hidden" } },
+    { key = "footerSize", kind = "slider", label = "Bottom line text size", min = 9, max = 18, step = 1 },
+
     { h = "Vendors and mail" },
     { key = "autoOpen", kind = "check", label = "Open bags at vendor, mail, bank, auction house" },
     { key = "sellButton", kind = "check", label = "Sell junk button at vendors" },
@@ -41,19 +87,54 @@ local function Apply()
     if B.Frame then B.Frame.ApplyLook() B.Frame.Refresh() end
 end
 
+-- the game's color picker, new and old style
+local function PickColor(key, done)
+    local cur = B.db[key] or B.DEFAULTS[key]
+    local r, g, b = cur[1], cur[2], cur[3]
+    local P = _G.ColorPickerFrame
+    if not P then return end
+    local function Changed()
+        local nr, ng, nb = P:GetColorRGB()
+        B.db[key] = { nr, ng, nb }
+        done()
+    end
+    local function Cancel()
+        B.db[key] = { r, g, b }
+        done()
+    end
+    if P.SetupColorPickerAndShow then
+        P:SetupColorPickerAndShow({ r = r, g = g, b = b, hasOpacity = false, swatchFunc = Changed, cancelFunc = Cancel })
+    else
+        P.hasOpacity = false
+        P.opacityFunc = nil
+        P.func = Changed
+        P.cancelFunc = Cancel
+        P.previousValues = { r = r, g = g, b = b }
+        P:SetColorRGB(r, g, b)
+        P:Hide() P:Show()
+    end
+end
+
 local function Sync()
     for _, w in ipairs(widgets) do
-        local v = B.db[w.row.key]
-        if w.row.kind == "check" then w.f:SetChecked(v and true or false)
-        elseif w.row.kind == "slider" then w.f:SetValue(tonumber(v) or w.row.min)
-        elseif w.row.kind == "cycle" then w.f:SetText(w.row.names[v] or tostring(v)) end
+        local row, v = w.row, B.db[w.row.key]
+        if row.kind == "check" then w.f:SetChecked(v and true or false)
+        elseif row.kind == "slider" then w.f:SetValue(tonumber(v) or row.min)
+        elseif row.kind == "cycle" then
+            local label = row.names and row.names[v]
+            if row.preset then label = PRESETS[v] and PRESETS[v].name end
+            w.f:SetText(label or tostring(v))
+        elseif row.kind == "color" then
+            local c = v or B.DEFAULTS[row.key]
+            w.f.tex:SetVertexColor(c[1], c[2], c[3], 1)
+        end
     end
 end
 
 local function Build()
     win = CreateFrame("Frame", "BaggieOptions", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     win:SetFrameStrata("DIALOG")
-    win:SetSize(330, 640)
+    win:SetSize(360, 640)
     win:SetPoint("CENTER")
     win:SetMovable(true) win:EnableMouse(true) win:SetClampedToScreen(true)
     win:RegisterForDrag("LeftButton")
@@ -72,38 +153,43 @@ local function Build()
     x:SetPoint("TOPRIGHT", 2, 1)
     table.insert(_G.UISpecialFrames, "BaggieOptions")
 
-    local y = -36
-    local n = 0
+    local scroll = CreateFrame("ScrollFrame", "BaggieOptionsScroll", win, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", 8, -34)
+    scroll:SetPoint("BOTTOMRIGHT", -28, 44)
+    local body = CreateFrame("Frame", nil, scroll)
+    body:SetSize(310, 1000)
+    scroll:SetScrollChild(body)
+
+    local y, n = -4, 0
     for _, row in ipairs(ROWS) do
         if row.h then
-            y = y - 6
-            local h = win:CreateFontString(nil, "OVERLAY")
+            y = y - 8
+            local h = body:CreateFontString(nil, "OVERLAY")
             h:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
             h:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
-            h:SetPoint("TOPLEFT", 14, y)
+            h:SetPoint("TOPLEFT", 6, y)
             h:SetText(row.h)
-            y = y - 18
+            y = y - 20
         elseif row.kind == "check" then
             n = n + 1
-            local cb = CreateFrame("CheckButton", "BaggieOpt" .. n, win, "UICheckButtonTemplate")
+            local cb = CreateFrame("CheckButton", "BaggieOpt" .. n, body, "UICheckButtonTemplate")
             cb:SetSize(22, 22)
-            cb:SetPoint("TOPLEFT", 14, y + 2)
-            local lbl = win:CreateFontString(nil, "OVERLAY")
+            cb:SetPoint("TOPLEFT", 6, y + 2)
+            local lbl = body:CreateFontString(nil, "OVERLAY")
             lbl:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
             lbl:SetPoint("LEFT", cb, "RIGHT", 4, 0)
             lbl:SetText(row.label)
             cb:SetScript("OnClick", function(self)
                 B.db[row.key] = self:GetChecked() and true or false
-                if row.key == "keyring" or row.key == "sharedPins" then B.Frame.Refresh() end
                 Apply()
             end)
             widgets[#widgets + 1] = { row = row, f = cb }
             y = y - 22
         elseif row.kind == "slider" then
             n = n + 1
-            local s = CreateFrame("Slider", "BaggieOpt" .. n, win, "OptionsSliderTemplate")
-            s:SetPoint("TOPLEFT", 18, y - 14)
-            s:SetWidth(200)
+            local s = CreateFrame("Slider", "BaggieOpt" .. n, body, "OptionsSliderTemplate")
+            s:SetPoint("TOPLEFT", 10, y - 14)
+            s:SetWidth(230)
             s:SetMinMaxValues(row.min, row.max)
             s:SetValueStep(row.step)
             if s.SetObeyStepOnDrag then s:SetObeyStepOnDrag(true) end
@@ -123,38 +209,63 @@ local function Build()
             widgets[#widgets + 1] = { row = row, f = s, label = Label }
             y = y - 38
         elseif row.kind == "cycle" then
-            local lbl = win:CreateFontString(nil, "OVERLAY")
+            local lbl = body:CreateFontString(nil, "OVERLAY")
             lbl:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
-            lbl:SetPoint("TOPLEFT", 18, y - 4)
+            lbl:SetPoint("TOPLEFT", 8, y - 3)
             lbl:SetText(row.label)
-            local b = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
-            b:SetSize(190, 20)
-            b:SetPoint("TOPLEFT", 100, y)
+            local b = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
+            b:SetSize(300, 20)
+            b:SetPoint("TOPLEFT", 6, y - 20)
             b:SetScript("OnClick", function()
                 local cur = B.db[row.key]
+                local nextv
                 for i, v in ipairs(row.values) do
-                    if v == cur then cur = row.values[i % #row.values + 1] break end
+                    if v == cur then nextv = row.values[i % #row.values + 1] break end
                 end
-                if cur == B.db[row.key] then cur = row.values[1] end
-                B.db[row.key] = cur
+                nextv = nextv or row.values[1]
+                if row.preset then O.ApplyPreset(nextv) else B.db[row.key] = nextv end
                 Sync() Apply()
             end)
             widgets[#widgets + 1] = { row = row, f = b }
+            y = y - 46
+        elseif row.kind == "color" then
+            local sw = CreateFrame("Button", nil, body)
+            sw:SetSize(22, 22)
+            sw:SetPoint("TOPLEFT", 8, y + 1)
+            sw.edge = sw:CreateTexture(nil, "BACKGROUND")
+            sw.edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+            sw.edge:SetVertexColor(0.8, 0.8, 0.8, 1)
+            sw.edge:SetAllPoints(sw)
+            sw.tex = sw:CreateTexture(nil, "ARTWORK")
+            sw.tex:SetTexture("Interface\\Buttons\\WHITE8X8")
+            sw.tex:SetPoint("TOPLEFT", 1, -1) sw.tex:SetPoint("BOTTOMRIGHT", -1, 1)
+            local lbl = body:CreateFontString(nil, "OVERLAY")
+            lbl:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+            lbl:SetPoint("LEFT", sw, "RIGHT", 8, 0)
+            lbl:SetText(row.label .. "  (click to change)")
+            sw:SetScript("OnClick", function()
+                PickColor(row.key, function() Sync() Apply() end)
+            end)
+            widgets[#widgets + 1] = { row = row, f = sw }
             y = y - 28
         end
     end
-    win:SetHeight(-y + 50)
+    body:SetHeight(-y + 20)
 
     local reset = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
     reset:SetSize(110, 20) reset:SetText("Defaults")
-    reset:SetPoint("BOTTOMLEFT", 14, 12)
+    reset:SetPoint("BOTTOMLEFT", 14, 14)
     reset:SetScript("OnClick", function()
-        for _, w in ipairs(widgets) do B.db[w.row.key] = B.DEFAULTS[w.row.key] end
+        for _, w in ipairs(widgets) do
+            local d = B.DEFAULTS[w.row.key]
+            if type(d) == "table" then d = { d[1], d[2], d[3] } end
+            B.db[w.row.key] = d
+        end
         Sync() Apply()
     end)
     local clear = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
     clear:SetSize(130, 20) clear:SetText("Clear saved spots")
-    clear:SetPoint("BOTTOMRIGHT", -14, 12)
+    clear:SetPoint("BOTTOMRIGHT", -14, 14)
     clear:SetScript("OnClick", function()
         for k in pairs(B.Pins()) do B.Pins()[k] = nil end
         Apply() B.Print("all saved spots cleared")

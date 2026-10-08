@@ -64,6 +64,20 @@ local function SetDesat(btn, on)
     elseif type(btn.icon) == "table" and btn.icon.SetDesaturated then btn.icon:SetDesaturated(on) end
 end
 
+local function StyleBorder(b, r, g, bl, size)
+    size = math.max(1, math.min(4, tonumber(size) or 1))
+    local e = b.edges
+    for i = 1, 4 do e[i]:SetVertexColor(r, g, bl, 1) end
+    if b.sized ~= size then
+        b.sized = size
+        for i = 1, 4 do e[i]:ClearAllPoints() end
+        e[1]:SetPoint("TOPLEFT") e[1]:SetPoint("TOPRIGHT") e[1]:SetHeight(size)
+        e[2]:SetPoint("BOTTOMLEFT") e[2]:SetPoint("BOTTOMRIGHT") e[2]:SetHeight(size)
+        e[3]:SetPoint("TOPLEFT") e[3]:SetPoint("BOTTOMLEFT") e[3]:SetWidth(size)
+        e[4]:SetPoint("TOPRIGHT") e[4]:SetPoint("BOTTOMRIGHT") e[4]:SetWidth(size)
+    end
+end
+
 local function UpdateButton(btn, text)
     local tex, count, locked, quality, link, id = B.SlotInfo(btn.bag, btn.slot)
     btn.itemID, btn.link = id, link
@@ -81,9 +95,18 @@ local function UpdateButton(btn, text)
     btn.baggieCount:SetText((tex and n > 1) and tostring(n) or "")
     QuietTemplate(btn)
 
-    if tex and B.db.borders and (quality or 0) >= 2 then
-        local r, g, b = QualityColor(quality)
-        btn.border:SetVertexColor(r, g, b)
+    local mode = B.db.borderMode
+    local sc = B.db.slotColor or B.DEFAULTS.slotColor
+    btn.baggieBg:SetVertexColor(sc[1], sc[2], sc[3], 1)
+    local show, br, bg, bb = false
+    if tex and mode == "quality" and (quality or 0) >= (tonumber(B.db.borderMinQuality) or 2) then
+        show = true br, bg, bb = QualityColor(quality)
+    elseif (mode == "custom" and tex) or mode == "slots" then
+        local c = B.db.borderColor or B.DEFAULTS.borderColor
+        show = true br, bg, bb = c[1], c[2], c[3]
+    end
+    if show then
+        StyleBorder(btn.border, br, bg, bb, B.db.borderSize)
         btn.border:Show()
     else
         btn.border:Hide()
@@ -258,11 +281,15 @@ local function Decorate(btn)
     btn.baggieIlvl:SetPoint("TOPRIGHT", -2, -3)
     btn.baggieIlvl:SetTextColor(1, 0.9, 0.5)
 
-    btn.border = btn:CreateTexture(nil, "OVERLAY")
-    btn.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-    btn.border:SetBlendMode("ADD")
-    btn.border:SetSize(CELL * 1.85, CELL * 1.85)
-    btn.border:SetPoint("CENTER")
+    btn.border = CreateFrame("Frame", nil, btn)
+    btn.border:SetAllPoints(btn)
+    btn.border:SetFrameLevel((btn:GetFrameLevel() or 1) + 2)
+    btn.border.edges = {}
+    for i = 1, 4 do
+        local t = btn.border:CreateTexture(nil, "OVERLAY")
+        t:SetTexture("Interface\\Buttons\\WHITE8X8")
+        btn.border.edges[i] = t
+    end
     btn.border:Hide()
 
     btn.pinMark = btn:CreateTexture(nil, "OVERLAY", nil, 7)
@@ -368,6 +395,9 @@ end
 local function Relayout(slots, text)
     local pins = B.Pins()
     CELL = math.max(24, math.min(56, tonumber(B.db.cellSize) or 37))
+    GAP = math.max(0, math.min(16, tonumber(B.db.gap) or 4))
+    PAD = math.max(4, math.min(30, tonumber(B.db.padding) or 12))
+    local inset = math.max(0, math.min(10, tonumber(B.db.iconInset) or 2))
     local cells, count = B.Layout.Build(slots, pins, B.db.layout)
     lastCells, lastCount = cells, count
     B.slotsNow = slots
@@ -383,8 +413,13 @@ local function Relayout(slots, text)
             local btn = GetButton(s.bag, s.slot)
             btn.cell = c
             btn:SetSize(CELL, CELL)
-            btn.border:SetSize(CELL * 1.85, CELL * 1.85)
-            btn:ClearAllPoints()
+            if btn.inset ~= inset then
+                btn.inset = inset
+                btn.baggieIcon:ClearAllPoints()
+                btn.baggieIcon:SetPoint("TOPLEFT", inset, -inset)
+                btn.baggieIcon:SetPoint("BOTTOMRIGHT", -inset, inset)
+            end
+                        btn:ClearAllPoints()
             btn:SetPoint("TOPLEFT", win, "TOPLEFT", px, py)
             btn:Show()
             if pick and pick.cell == c then btn.pickGlow:Show() end
@@ -412,16 +447,26 @@ end
 local function Footer(slots)
     local free, total = 0, #slots
     for _, s in ipairs(slots) do if not s.itemID then free = free + 1 end end
-    win.free:SetText(("%d / %d"):format(total - free, total))
+    local cm = B.db.counterMode
+    if cm == "free" then win.free:SetText(("%d free of %d"):format(free, total))
+    elseif cm == "freeonly" then win.free:SetText(("%d free"):format(free))
+    else win.free:SetText(("%d / %d"):format(total - free, total)) end
+    win.free:SetShown(B.db.showFooter and cm ~= "none")
+
     local money = _G.GetMoney and _G.GetMoney() or 0
+    local gm = B.db.goldMode
+    local g, s, c = math.floor(money / 10000), math.floor(money / 100) % 100, money % 100
     local text
-    if _G.GetCoinTextureString then text = _G.GetCoinTextureString(money)
+    if gm == "gold" then
+        text = tostring(g):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "") .. "|cffffd700g|r"
+    elseif gm == "icons" and _G.GetCoinTextureString then
+        text = _G.GetCoinTextureString(money)
     else
-        text = ("%dg %ds %dc"):format(math.floor(money / 10000), math.floor(money / 100) % 100, money % 100)
+        text = ("|cffffd700%dg|r |cffc7c7cf%ds|r |cffeda55f%dc|r"):format(g, s, c)
     end
     win.money:SetText(text)
-    win.hint:SetShown(editMode)
-    win.hint:SetText("Pin mode: click an item to save it to its spot. Click it again to free it.")
+    win.money:SetShown(B.db.showFooter and gm ~= "none")
+    win.hint:Hide()
 end
 
 function F.Refresh()
@@ -439,7 +484,6 @@ function F.Refresh()
     Relayout(slots, text)
     for _, b in pairs(buttons) do if b:IsShown() then UpdateButton(b, text) end end
     Footer(slots)
-    if editMode then win.pinBtn:LockHighlight() else win.pinBtn:UnlockHighlight() end
 end
 
 local function Schedule()
@@ -473,12 +517,17 @@ end
 function F.ResetPosition() if win then RestorePosition() end end
 function F.ApplyLook()
     if not win or not B.db then return end
-    win:SetBackdropColor(0.05, 0.05, 0.07, tonumber(B.db.alpha) or 0.96)
+    local bg, edge, tc = B.db.bgColor or B.DEFAULTS.bgColor, B.db.edgeColor or B.DEFAULTS.edgeColor, B.db.titleColor or B.DEFAULTS.titleColor
+    win:SetBackdropColor(bg[1], bg[2], bg[3], tonumber(B.db.alpha) or 0.96)
+    win:SetBackdropBorderColor(edge[1], edge[2], edge[3], 0.95)
+    win.bar:SetVertexColor(tc[1], tc[2], tc[3], 1)
+    win.title:SetTextColor(edge[1], edge[2], edge[3])
+    local fs = tonumber(B.db.footerSize) or 11
+    win.free:SetFont("Fonts\\FRIZQT__.TTF", fs, "")
+    win.money:SetFont("Fonts\\FRIZQT__.TTF", fs, "")
     win.search:SetShown(B.db.showSearch)
     local hasSort = (_G.C_Container and _G.C_Container.SortBags) or _G.SortBags
     win.sortBtn:SetShown(B.db.showSort and hasSort and true or false)
-    win.free:SetShown(B.db.showFooter)
-    win.money:SetShown(B.db.showFooter)
     win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
     F.ApplyScale()
 end
@@ -521,11 +570,13 @@ local function Create()
     win:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.9)
 
     local bar = win:CreateTexture(nil, "ARTWORK")
+    win.bar = bar
     bar:SetTexture("Interface\\Buttons\\WHITE8X8")
     bar:SetVertexColor(0.13, 0.11, 0.07, 1)
     bar:SetPoint("TOPLEFT", 1, -1) bar:SetPoint("TOPRIGHT", -1, -1) bar:SetHeight(26)
 
     local title = Label(win, 14, GOLD[1], GOLD[2], GOLD[3])
+    win.title = title
     title:SetFont("Fonts\\MORPHEUS.TTF", 15, "")
     title:SetPoint("TOPLEFT", 12, -7)
     title:SetText("Baggie")
@@ -542,19 +593,11 @@ local function Create()
     win.search:SetScript("OnEscapePressed", function(self) self:SetText("") self:ClearFocus() end)
     win.search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
 
-    win.pinBtn = Button(win, "Pin", 46, function()
-        editMode = not editMode
-        pick = nil
-        F.UpdateOverlays()
-        F.Refresh()
-    end)
-    win.pinBtn:SetPoint("TOPLEFT", PAD, -33)
-
     win.sortBtn = Button(win, "Sort", 46, function()
         local c = _G.C_Container
         if c and c.SortBags then c.SortBags() elseif _G.SortBags then _G.SortBags() end
     end)
-    win.sortBtn:SetPoint("LEFT", win.pinBtn, "RIGHT", 4, 0)
+    win.sortBtn:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -33)
     if not ((_G.C_Container and _G.C_Container.SortBags) or _G.SortBags) then win.sortBtn:Hide() end
 
     win.sellBtn = Button(win, "Sell junk", 62, function() F.SellJunk() end)

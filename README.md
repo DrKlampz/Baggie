@@ -7,7 +7,6 @@ Your backpack and bags open in a single window. Save an item to a spot and it st
 ## Saving an item to a spot
 
 - **Alt+click** an item to save it to the spot it is in. Alt+click it again to free the spot.
-- Or press the **Pin** button and click items instead of holding Alt. Click Pin again to leave pin mode.
 - Dropping an item on a faded spot puts it in your first empty bag slot, and it shows up in the saved spot.
 - A small gold mark on an item means it has a saved spot. Spots are saved per character, by item (so every stack of Hearthstone lands in the same cell).
 
@@ -18,7 +17,7 @@ Spots are virtual. Baggie never moves anything in your real bags, so it is insta
 - Search box: dims everything that does not match a name or item type.
 - Quality borders, dimmed grey junk, cooldowns, free slot counter, money.
 - Sort button (manual only, uses the game's own bag sort). Bags never rearrange on their own.
-- Options window (`/baggie options`): layout, sizes, opacity, item level, vendor helpers and more.
+- Options window (`/baggie options`): themes and color pickers for the window, title bar, slots and borders; border style and thickness; slot size, spacing and padding; gold and slot-counter display; item level; vendor helpers and more.
 - Replaces the default bag windows and the bag keys (B, F12 etc.). `/baggie default` gives the default bags back.
 
 ## Commands
