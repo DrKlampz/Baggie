@@ -181,6 +181,8 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
             n = n + 1 B.Print(("cell %d: %s (%d)"):format(p.cell or 0, p.name or "item", id))
         end
         if n == 0 then B.Print("no saved spots yet. Alt+click an item, then Alt+click a cell.") end
+    elseif cmd == "debug" then
+        B.Frame.Debug()
     elseif cmd == "default" then
         B.db.enabled = not B.db.enabled B.Frame.ApplyOverrides()
         B.Print(B.db.enabled and "Baggie bags on" or "default bags back (applies fully after /reload)")
@@ -190,6 +192,7 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.Print("/baggie  open or close your bags")
         B.Print("Alt+click an item, then Alt+click any cell to save the item to that spot.")
         B.Print("Alt+right-click a saved cell to free it. The Pin button does the same without Alt.")
+        B.Print("/baggie debug (prints what Baggie sees, for bug reports)")
         B.Print("/baggie pins | unpin all | cols N | scale N | borders | keyring | default | reset")
     end
 end)

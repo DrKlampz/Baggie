@@ -65,9 +65,18 @@ end
 local function UpdateButton(btn, text)
     local tex, count, locked, quality, link, id = B.SlotInfo(btn.bag, btn.slot)
     btn.itemID, btn.link = id, link
-    SetIcon(btn, tex)
-    SetCount(btn, tonumber(count) or 0)
-    SetDesat(btn, locked and true or false)
+    pcall(SetIcon, btn, tex)
+    pcall(SetCount, btn, tonumber(count) or 0)
+    pcall(SetDesat, btn, locked and true or false)
+    if tex then
+        btn.baggieIcon:SetTexture(tex)
+        btn.baggieIcon:Show()
+        btn.baggieIcon:SetDesaturated(locked and true or false)
+    else
+        btn.baggieIcon:Hide()
+    end
+    local n = tonumber(count) or 0
+    btn.baggieCount:SetText((tex and n > 1) and tostring(n) or "")
     if type(btn.IconBorder) == "table" then btn.IconBorder:Hide() end
 
     if tex and B.db.borders and (quality or 0) >= 2 then
@@ -180,6 +189,22 @@ local function MakeBagFrame(bag)
 end
 
 local function Decorate(btn)
+    -- Baggie draws its own slot, icon and count so it never depends on the template's helpers
+    btn.baggieBg = btn:CreateTexture(nil, "BACKGROUND")
+    btn.baggieBg:SetTexture("Interface\\Buttons\\WHITE8X8")
+    btn.baggieBg:SetVertexColor(0.13, 0.13, 0.16, 1)
+    btn.baggieBg:SetAllPoints(btn)
+
+    btn.baggieIcon = btn:CreateTexture(nil, "ARTWORK", nil, 2)
+    btn.baggieIcon:SetPoint("TOPLEFT", 2, -2)
+    btn.baggieIcon:SetPoint("BOTTOMRIGHT", -2, 2)
+    btn.baggieIcon:Hide()
+
+    btn.baggieCount = btn:CreateFontString(nil, "OVERLAY")
+    btn.baggieCount:SetFont("Fonts\\FRIZQT__.TTF", 11, "OUTLINE")
+    btn.baggieCount:SetPoint("BOTTOMRIGHT", -3, 3)
+    btn.baggieCount:SetTextColor(1, 1, 1)
+
     btn.border = btn:CreateTexture(nil, "OVERLAY")
     btn.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
     btn.border:SetBlendMode("ADD")
@@ -207,9 +232,15 @@ local function GetButton(bag, slot)
     if btn then return btn end
     local parent = MakeBagFrame(bag)
     local name = ("BaggieItem%s_%d"):format(bag < 0 and ("K" .. -bag) or bag, slot)
-    local ok, made = pcall(CreateFrame, "Button", name, parent, "ContainerFrameItemButtonTemplate")
-    if not ok or not made then made = CreateFrame("Button", name, parent, "ItemButtonTemplate") end
+    local used = "ContainerFrameItemButtonTemplate"
+    local ok, made = pcall(CreateFrame, "Button", name, parent, used)
+    if not ok or not made then
+        used = "ItemButtonTemplate"
+        ok, made = pcall(CreateFrame, "Button", name, parent, used)
+    end
+    if not ok or not made then used = "none (plain button)" made = CreateFrame("Button", name, parent) end
     btn = made
+    btn.baggieTemplate = used
     btn:SetID(slot)
     btn:SetSize(CELL, CELL)
     btn.bag, btn.slot = bag, slot
@@ -468,6 +499,51 @@ local function Create()
     win:SetScript("OnHide", function() editMode, pick = false, nil end)
     table.insert(_G.UISpecialFrames, "BaggieFrame")
     win:Hide()
+end
+
+function F.Debug()
+    local function T(v) return tostring(v) end
+    local P = B.Print
+    local c = _G.C_Container
+    P("api: C_Container=" .. T(c ~= nil) .. " GetContainerItemInfo(new)=" .. T(c and c.GetContainerItemInfo ~= nil)
+      .. " GetContainerItemInfo(old)=" .. T(_G.GetContainerItemInfo ~= nil))
+    local ids = B.BagIDs()
+    local parts = {}
+    for _, bag in ipairs(ids) do parts[#parts + 1] = bag .. "=" .. B.NumSlots(bag) end
+    P("bag sizes: " .. table.concat(parts, " ") .. "  (NUM_BAG_SLOTS=" .. T(_G.NUM_BAG_SLOTS) .. ")")
+    local slots = B.ScanSlots()
+    local items = 0
+    for _, s in ipairs(slots) do if s.itemID then items = items + 1 end end
+    P(("slots %d, with items %d, cells %d, window %s"):format(#slots, items, lastCount,
+      win and (T(win:GetWidth()) .. "x" .. T(win:GetHeight()) .. " scale " .. T(win:GetScale())) or "none"))
+    -- the first slot that holds an item, raw
+    for _, s in ipairs(slots) do
+        if s.itemID then
+            local raw
+            if c and c.GetContainerItemInfo then raw = c.GetContainerItemInfo(s.bag, s.slot) end
+            P(("first item: bag %d slot %d id %d  raw type=%s"):format(s.bag, s.slot, s.itemID, type(raw)))
+            if type(raw) == "table" then
+                local keys = {}
+                for k, v in pairs(raw) do keys[#keys + 1] = k .. "=" .. T(v) end
+                table.sort(keys)
+                P("  fields: " .. table.concat(keys, ", "))
+            end
+            local btn = buttons[s.bag .. ":" .. s.slot]
+            if btn then
+                local pt, _, rp, x, y = btn:GetPoint()
+                P(("  button: shown=%s cell=%s size=%sx%s alpha=%s level=%s point=%s %s %s"):format(
+                    T(btn:IsShown()), T(btn.cell), T(btn:GetWidth()), T(btn:GetHeight()),
+                    T(btn:GetAlpha()), T(btn:GetFrameLevel()), T(pt), T(x), T(y)))
+                P(("  icon: shown=%s texture=%s  template=%s"):format(T(btn.baggieIcon:IsShown()),
+                    T(btn.baggieIcon:GetTexture()), T(btn.baggieTemplate)))
+            else
+                P("  no button was made for this slot")
+            end
+            break
+        end
+    end
+    if win then P(("window: shown=%s strata=%s level=%s alpha=%s"):format(T(win:IsShown()),
+        T(win:GetFrameStrata()), T(win:GetFrameLevel()), T(win:GetAlpha()))) end
 end
 
 function F.Open()
