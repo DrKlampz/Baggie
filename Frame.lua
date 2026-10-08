@@ -180,18 +180,29 @@ function F.CellClick(c, mouse)
     F.Refresh()
 end
 
-local function Wrap(btn, getCell)
-    local orig = btn:GetScript("OnClick")
-    btn:SetScript("OnClick", function(self, mouse, ...)
-        if editMode or (_G.IsAltKeyDown and _G.IsAltKeyDown()) then
-            F.CellClick(getCell(self), mouse)
-        elseif orig then
-            orig(self, mouse, ...)
-        end
-    end)
-    local drag, recv = btn:GetScript("OnDragStart"), btn:GetScript("OnReceiveDrag")
-    if drag then btn:SetScript("OnDragStart", function(...) if not editMode then drag(...) end end) end
-    if recv then btn:SetScript("OnReceiveDrag", function(...) if not editMode then recv(...) end end) end
+-- Pinning clicks are caught by Baggie's own transparent overlay, shown only while Alt is held
+-- or Pin mode is on. The game's item buttons are never touched, so using, equipping and
+-- dragging items stay untainted.
+local overlays = {}
+local function Wrap(btn)
+    local o = CreateFrame("Button", nil, btn)
+    o:SetAllPoints(btn)
+    o:SetFrameLevel((btn:GetFrameLevel() or 1) + 8)
+    o:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    o:SetScript("OnClick", function(_, mouse) F.CellClick(btn.cell, mouse) end)
+    o:Hide()
+    o.owner = btn
+    btn.overlay = o
+    overlays[#overlays + 1] = o
+end
+
+function F.UpdateOverlays()
+    if InCombat() then return end
+    local on = editMode or (_G.IsAltKeyDown and _G.IsAltKeyDown()) and true or false
+    for _, o in ipairs(overlays) do
+        local p = o.owner
+        o:SetShown(on and p:IsShown())
+    end
 end
 
 ----------------------------------------------------------------------
@@ -268,7 +279,7 @@ local function GetButton(bag, slot)
     btn:SetSize(CELL, CELL)
     btn.bag, btn.slot = bag, slot
     Decorate(btn)
-    Wrap(btn, function(self) return self.cell end)
+    Wrap(btn)
     buttons[key] = btn
     return btn
 end
@@ -373,6 +384,7 @@ local function Relayout(slots, text)
         end
     end
 
+    F.UpdateOverlays()
     local rows = math.max(1, math.ceil(count / B.db.cols))
     win:SetSize(PAD * 2 + B.db.cols * (CELL + GAP) - GAP,
                 TOP + rows * (CELL + GAP) - GAP + BOTTOM)
@@ -515,6 +527,7 @@ local function Create()
     win.pinBtn = Button(win, "Pin", 46, function()
         editMode = not editMode
         pick = nil
+        F.UpdateOverlays()
         F.Refresh()
     end)
     win.pinBtn:SetPoint("TOPLEFT", PAD, -33)
@@ -545,7 +558,7 @@ local function Create()
     win.money:SetPoint("BOTTOMRIGHT", -PAD, 10)
 
     win:SetScript("OnShow", function() F.Refresh() end)
-    win:SetScript("OnHide", function() editMode, pick = false, nil end)
+    win:SetScript("OnHide", function() editMode, pick = false, nil F.UpdateOverlays() end)
     table.insert(_G.UISpecialFrames, "BaggieFrame")
     win:Hide()
 end
@@ -685,3 +698,12 @@ B.On("BANKFRAME_OPENED", B.Safe("bank", function() Arrive(false) end))
 B.On("BANKFRAME_CLOSED", B.Safe("bankx", function() Leave(false) end))
 B.On("AUCTION_HOUSE_SHOW", B.Safe("ah", function() Arrive(false) end))
 B.On("AUCTION_HOUSE_CLOSED", B.Safe("ahx", function() Leave(false) end))
+
+B.On("MODIFIER_STATE_CHANGED", B.Safe("mod", function() if win and win:IsShown() then F.UpdateOverlays() end end))
+B.On("ADDON_ACTION_BLOCKED", function(addon, func)
+    if addon == ADDON_NAME and B.db then
+        B.db.blocked = B.db.blocked or {}
+        B.db.blocked[tostring(func)] = (B.db.blocked[tostring(func)] or 0) + 1
+        B.Print("the game blocked: " .. tostring(func) .. " (please send me this)")
+    end
+end)

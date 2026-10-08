@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.4
+- Fixes the "Baggie has been blocked from an action only available to the Blizzard UI" popup. Baggie no longer replaces the click and drag scripts on the game's item buttons (that tainted using and equipping items); Alt+click and Pin mode now use a transparent overlay of Baggie's own.
+- If the game blocks something anyway, Baggie prints which action it was.
+
 ## v0.1.3
 - Saving an item to a spot now reserves that spot. Whatever was sitting there is bumped to a free cell (your old spot is left empty), and Baggie never swaps two items around.
 - Trying to save onto a spot already saved for another item is refused with a message; Alt+right-click that spot to free it first.
