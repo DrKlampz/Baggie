@@ -1,7 +1,8 @@
 # Changelog
 
 ## v0.1.3
-- Alt+click an item, then Alt+click a cell that holds another saved item: the two now swap spots instead of the other one losing its spot.
+- Saving an item to a spot now reserves that spot. Whatever was sitting there is bumped to a free cell (your old spot is left empty), and Baggie never swaps two items around.
+- Trying to save onto a spot already saved for another item is refused with a message; Alt+right-click that spot to free it first.
 
 ## v0.1.2
 - Nothing sorts itself any more. Items now sit in real bag order by default; a saved spot just swaps its item into place. The old items-first packing is still there as the "Compact" layout option.

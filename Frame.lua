@@ -157,6 +157,13 @@ function F.CellClick(c, mouse)
     end
     local pins = B.Pins()
     local id = pick.itemID
+    local holder = PinnedItemAtCell(c)
+    if holder and holder ~= id then
+        pick = nil
+        B.Print("that spot is saved for " .. (pins[holder].name or "another item") .. ". Alt+right-click it to free it first.")
+        F.Refresh()
+        return
+    end
     local icon, name
     for _, s in ipairs(B.slotsNow or {}) do
         if s.itemID == id then
@@ -170,7 +177,6 @@ function F.CellClick(c, mouse)
     if icon then pins[id].icon = icon end
     if name then pins[id].name = name end
     pick = nil
-    if other and not freed then B.Print("swapped the two saved spots") end
     F.Refresh()
 end
 

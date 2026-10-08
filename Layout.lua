@@ -124,9 +124,25 @@ function L.BuildReal(slots, pins)
             local from = where[found]
             if from ~= p.cell then
                 local a, b = cells[from], cells[p.cell]
-                cells[from], cells[p.cell] = b, a
-                if a.kind == "slot" then where[a.index] = p.cell end
-                if b.kind == "slot" then where[b.index] = from end
+                -- whatever sat in the saved cell is bumped to a free cell, not into the old spot
+                local e
+                if b.kind == "slot" and slots[b.index].itemID then
+                    for c = n, 1, -1 do
+                        local y = cells[c]
+                        if c ~= p.cell and y.kind == "slot" and not slots[y.index].itemID and not pinnedCell[c] then
+                            e = c break
+                        end
+                    end
+                end
+                if e then
+                    local empty = cells[e]
+                    cells[p.cell], cells[from], cells[e] = a, empty, b
+                    where[a.index] = p.cell where[empty.index] = from where[b.index] = e
+                else
+                    cells[from], cells[p.cell] = b, a
+                    if a.kind == "slot" then where[a.index] = p.cell end
+                    if b.kind == "slot" then where[b.index] = from end
+                end
             end
             placedSlot[found] = true
         else
