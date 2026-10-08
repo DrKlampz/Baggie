@@ -4,6 +4,7 @@ local F = {}
 B.Frame = F
 
 local CELL, GAP, PAD, TOP, BOTTOM = 37, 4, 12, 62, 34
+local merchantOpen, openedByUs = false, false
 local GOLD = { 0.88, 0.69, 0.29 }
 
 local win, bagFrames, buttons, ghosts = nil, {}, {}, {}
@@ -92,13 +93,24 @@ local function UpdateButton(btn, text)
     if text ~= "" and not Matches(text, link) then dim = 0.25 end
     btn:SetAlpha(dim)
 
+    local il = ""
+    if B.db.ilvl and link and quality and quality >= 2 then
+        local ok, lvl = pcall(function()
+            if _G.GetDetailedItemLevelInfo then return (_G.GetDetailedItemLevelInfo(link)) end
+            return select(4, _G.GetItemInfo(link))
+        end)
+        local _, _, _, _, _, _, _, _, equipLoc = _G.GetItemInfo and _G.GetItemInfo(link) or nil
+        if ok and tonumber(lvl) and lvl > 1 and equipLoc and equipLoc ~= "" then il = tostring(lvl) end
+    end
+    btn.baggieIlvl:SetText(il)
+
     local start, dur, enable = B.Cooldown(btn.bag, btn.slot)
     local cd = type(btn.Cooldown) == "table" and btn.Cooldown or (type(btn.cooldown) == "table" and btn.cooldown)
     if cd and _G.CooldownFrame_Set then _G.CooldownFrame_Set(cd, tonumber(start) or 0, tonumber(dur) or 0, tonumber(enable) or 0) end
 
     -- the little pin mark: this item type has a saved spot
     local pins = B.Pins()
-    btn.pinMark:SetShown(id ~= nil and pins[id] ~= nil)
+    btn.pinMark:SetShown(B.db.showPinMark and id ~= nil and pins[id] ~= nil)
     if id and pins[id] then
         if tex then pins[id].icon = tex end
         local n = ItemName(link)
@@ -204,6 +216,11 @@ local function Decorate(btn)
     btn.baggieCount:SetFont("Fonts\\FRIZQT__.TTF", 11, "OUTLINE")
     btn.baggieCount:SetPoint("BOTTOMRIGHT", -3, 3)
     btn.baggieCount:SetTextColor(1, 1, 1)
+
+    btn.baggieIlvl = btn:CreateFontString(nil, "OVERLAY")
+    btn.baggieIlvl:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+    btn.baggieIlvl:SetPoint("TOPRIGHT", -2, -3)
+    btn.baggieIlvl:SetTextColor(1, 0.9, 0.5)
 
     btn.border = btn:CreateTexture(nil, "OVERLAY")
     btn.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
@@ -314,7 +331,8 @@ end
 
 local function Relayout(slots, text)
     local pins = B.Pins()
-    local cells, count = B.Layout.Build(slots, pins)
+    CELL = math.max(24, math.min(56, tonumber(B.db.cellSize) or 37))
+    local cells, count = B.Layout.Build(slots, pins, B.db.layout)
     lastCells, lastCount = cells, count
     B.slotsNow = slots
 
@@ -328,6 +346,8 @@ local function Relayout(slots, text)
             local s = slots[x.index]
             local btn = GetButton(s.bag, s.slot)
             btn.cell = c
+            btn:SetSize(CELL, CELL)
+            btn.border:SetSize(CELL * 1.85, CELL * 1.85)
             btn:ClearAllPoints()
             btn:SetPoint("TOPLEFT", win, "TOPLEFT", px, py)
             btn:Show()
@@ -336,6 +356,8 @@ local function Relayout(slots, text)
             local g = GetGhost(c)
             local p = pins[x.itemID] or {}
             g.cell = c
+            g:SetSize(CELL, CELL)
+            g.icon:SetAlpha(tonumber(B.db.ghostAlpha) or 0.35)
             g.name = p.name
             g.icon:SetTexture(p.icon)
             g.pickGlow:SetShown(pick ~= nil and pick.cell == c)
@@ -413,6 +435,18 @@ local function RestorePosition()
 end
 
 function F.ResetPosition() if win then RestorePosition() end end
+function F.ApplyLook()
+    if not win or not B.db then return end
+    win:SetBackdropColor(0.05, 0.05, 0.07, tonumber(B.db.alpha) or 0.96)
+    win.search:SetShown(B.db.showSearch)
+    local hasSort = (_G.C_Container and _G.C_Container.SortBags) or _G.SortBags
+    win.sortBtn:SetShown(B.db.showSort and hasSort and true or false)
+    win.free:SetShown(B.db.showFooter)
+    win.money:SetShown(B.db.showFooter)
+    win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
+    F.ApplyScale()
+end
+
 function F.ApplyScale() if win then win:SetScale(B.db.scale or 1) end end
 
 local function Label(parent, size, r, g, b)
@@ -439,7 +473,7 @@ local function Create()
     win:SetMovable(true)
     win:EnableMouse(true)
     win:RegisterForDrag("LeftButton")
-    win:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    win:SetScript("OnDragStart", function(self) if not B.db.lockPos then self:StartMoving() end end)
     win:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() SavePosition() end)
     win:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -486,8 +520,17 @@ local function Create()
     win.sortBtn:SetPoint("LEFT", win.pinBtn, "RIGHT", 4, 0)
     if not ((_G.C_Container and _G.C_Container.SortBags) or _G.SortBags) then win.sortBtn:Hide() end
 
+    win.sellBtn = Button(win, "Sell junk", 62, function() F.SellJunk() end)
+    win.sellBtn:SetPoint("LEFT", win.sortBtn, "RIGHT", 4, 0)
+    win.sellBtn:Hide()
+
+    win.gear = Button(win, "Options", 54, function() B.Options.Toggle() end)
+    win.gear:SetPoint("TOPRIGHT", win, "TOPRIGHT", -26, -4)
+    win.search:ClearAllPoints()
+    win.search:SetPoint("TOPRIGHT", win, "TOPRIGHT", -34, -33)
+
     win.hint = Label(win, 10, 0.5, 0.85, 1)
-    win.hint:SetPoint("LEFT", win.sortBtn, "RIGHT", 8, 0)
+    win.hint:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -50)
     win.hint:Hide()
 
     win.free = Label(win, 11, 0.8, 0.8, 0.8)
@@ -499,6 +542,21 @@ local function Create()
     win:SetScript("OnHide", function() editMode, pick = false, nil end)
     table.insert(_G.UISpecialFrames, "BaggieFrame")
     win:Hide()
+end
+
+function F.SellJunk()
+    if not merchantOpen then return end
+    local c = _G.C_Container
+    local n = 0
+    for _, s in ipairs(B.ScanSlots()) do
+        local _, _, locked, quality, link = B.SlotInfo(s.bag, s.slot)
+        if link and quality == 0 and not locked then
+            if c and c.UseContainerItem then c.UseContainerItem(s.bag, s.slot)
+            elseif _G.UseContainerItem then _G.UseContainerItem(s.bag, s.slot) end
+            n = n + 1
+        end
+    end
+    B.Print(n > 0 and ("sold " .. n .. " grey item stack(s)") or "no grey items to sell")
 end
 
 function F.Debug()
@@ -583,7 +641,7 @@ end
 
 function F.Setup()
     Create()
-    F.ApplyScale()
+    F.ApplyLook()
     RestorePosition()
     F.ApplyOverrides()
 end
@@ -596,3 +654,28 @@ B.On("PLAYER_REGEN_ENABLED", B.Safe("regen", function()
     if relayoutAfterCombat then relayoutAfterCombat = false F.Refresh() end
 end))
 B.On("PLAYER_ENTERING_WORLD", B.Safe("enter", function() if win then F.ApplyOverrides() end end))
+
+-- vendor / mail / auction house / bank: open on arrival, close on leaving
+local function Arrive(isMerchant)
+    if not win or not B.db or not B.db.enabled then return end
+    if isMerchant then
+        merchantOpen = true
+        win.sellBtn:SetShown(B.db.sellButton)
+    end
+    if B.db.autoOpen and not win:IsShown() then openedByUs = true win:Show() end
+    if isMerchant and B.db.autoSell then F.SellJunk() end
+end
+local function Leave(isMerchant)
+    if not win then return end
+    if isMerchant then merchantOpen = false win.sellBtn:Hide() end
+    if openedByUs and win:IsShown() then win:Hide() end
+    openedByUs = false
+end
+B.On("MERCHANT_SHOW", B.Safe("merchant", function() Arrive(true) end))
+B.On("MERCHANT_CLOSED", B.Safe("merchantx", function() Leave(true) end))
+B.On("MAIL_SHOW", B.Safe("mail", function() Arrive(false) end))
+B.On("MAIL_CLOSED", B.Safe("mailx", function() Leave(false) end))
+B.On("BANKFRAME_OPENED", B.Safe("bank", function() Arrive(false) end))
+B.On("BANKFRAME_CLOSED", B.Safe("bankx", function() Leave(false) end))
+B.On("AUCTION_HOUSE_SHOW", B.Safe("ah", function() Arrive(false) end))
+B.On("AUCTION_HOUSE_CLOSED", B.Safe("ahx", function() Leave(false) end))

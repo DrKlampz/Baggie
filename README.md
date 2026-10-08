@@ -18,7 +18,8 @@ Spots are virtual. Baggie never moves anything in your real bags, so it is insta
 
 - Search box: dims everything that does not match a name or item type.
 - Quality borders, dimmed grey junk, cooldowns, free slot counter, money.
-- Sort button (uses the game's own bag sort).
+- Sort button (manual only, uses the game's own bag sort). Bags never rearrange on their own.
+- Options window (`/baggie options`): layout, sizes, opacity, item level, vendor helpers and more.
 - Replaces the default bag windows and the bag keys (B, F12 etc.). `/baggie default` gives the default bags back.
 
 ## Commands

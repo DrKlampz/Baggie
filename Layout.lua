@@ -12,7 +12,7 @@ local L = B.Layout
 --            = { kind = "ghost", itemID = id }         a reserved, empty saved spot
 -- The window has at least as many cells as real slots. It grows by whole cells only
 -- when saved spots would otherwise push a real item out of the window.
-function L.Build(slots, pins)
+function L.BuildCompact(slots, pins)
     local n = #slots
     pins = pins or {}
 
@@ -85,6 +85,79 @@ function L.Build(slots, pins)
     -- pins beyond the last drawn cell stay valid; keep the window at least that big
     if count < maxPinCell then count = maxPinCell end
     return cells, count
+end
+
+-- Real bag order (the default): every slot stays exactly where the game has it. The only
+-- things that move are the items you saved to a spot. A saved item swaps places with
+-- whatever sat in its cell; a saved spot with no item reserves its cell, and the slot it
+-- covered moves into the cell of an empty slot (or is simply not drawn if it is empty).
+function L.BuildReal(slots, pins)
+    local n = #slots
+    pins = pins or {}
+    local order = {}
+    for itemID, p in pairs(pins) do
+        if type(p) == "table" and type(p.cell) == "number" and p.cell >= 1 and p.cell <= n then
+            order[#order + 1] = { id = itemID, cell = math.floor(p.cell) }
+        end
+    end
+    table.sort(order, function(a, b)
+        if a.cell ~= b.cell then return a.cell < b.cell end
+        return tostring(a.id) < tostring(b.id)
+    end)
+    local seen, valid, pinnedCell = {}, {}, {}
+    for _, p in ipairs(order) do
+        if not seen[p.cell] then seen[p.cell] = true valid[#valid + 1] = p pinnedCell[p.cell] = true end
+    end
+
+    local cells = {}                     -- cells[c] = { kind="slot", index=i } | { kind="ghost", itemID=id }
+    local where = {}                     -- slot index -> cell currently holding it
+    for i = 1, n do cells[i] = { kind = "slot", index = i } where[i] = i end
+
+    local placedSlot = {}                -- slot index fixed in its pinned cell
+    local ghosts = {}
+    for _, p in ipairs(valid) do
+        local found
+        for i = 1, n do
+            if slots[i].itemID == p.id and not placedSlot[i] then found = i break end
+        end
+        if found then
+            local from = where[found]
+            if from ~= p.cell then
+                local a, b = cells[from], cells[p.cell]
+                cells[from], cells[p.cell] = b, a
+                if a.kind == "slot" then where[a.index] = p.cell end
+                if b.kind == "slot" then where[b.index] = from end
+            end
+            placedSlot[found] = true
+        else
+            ghosts[#ghosts + 1] = p
+        end
+    end
+
+    local extra = {}
+    for _, p in ipairs(ghosts) do
+        local x = cells[p.cell]
+        cells[p.cell] = { kind = "ghost", itemID = p.id }
+        if x.kind == "slot" and slots[x.index].itemID then
+            -- an item lost its cell: take the cell of an empty slot, counting from the end
+            local took
+            for c = n, 1, -1 do
+                local y = cells[c]
+                if y.kind == "slot" and not slots[y.index].itemID and not pinnedCell[c] then
+                    cells[c] = x where[x.index] = c took = true break
+                end
+            end
+            if not took then extra[#extra + 1] = x end
+        end
+    end
+    local count = n
+    for _, x in ipairs(extra) do count = count + 1 cells[count] = x end
+    return cells, count
+end
+
+function L.Build(slots, pins, mode)
+    if mode == "compact" then return L.BuildCompact(slots, pins) end
+    return L.BuildReal(slots, pins)
 end
 
 -- Which cell currently shows the given real slot index (nil if none).

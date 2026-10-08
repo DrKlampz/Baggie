@@ -12,6 +12,20 @@ B.DEFAULTS = {
     junkDim = true,      -- dim grey items
     point = nil,         -- saved window position
     keyring = false,
+    layout = "real",     -- "real" = bag order, nothing moves; "compact" = items first
+    alpha = 0.96,        -- window background opacity
+    cellSize = 37,
+    ilvl = false,        -- item level on gear
+    showSearch = true,
+    showFooter = true,
+    showSort = true,
+    showPinMark = true,
+    ghostAlpha = 0.35,
+    lockPos = false,
+    autoOpen = true,     -- open at vendor / mailbox / auction house / bank
+    sellButton = true,   -- "Sell junk" button while a vendor is open
+    autoSell = false,    -- sell grey items automatically on vendor open
+    sharedPins = false,  -- one set of saved spots for all characters
 }
 
 local function Merge(dst, src)
@@ -113,6 +127,11 @@ end
 
 function B.Pins()
     if not B.db then return {} end
+    if B.db.sharedPins then
+        B.db.shared = B.db.shared or { pins = {} }
+        B.db.shared.pins = B.db.shared.pins or {}
+        return B.db.shared.pins
+    end
     B.db.chars = B.db.chars or {}
     local key = B.CharKey()
     B.db.chars[key] = B.db.chars[key] or { pins = {} }
@@ -171,6 +190,11 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         else B.Print("usage: /baggie scale 0.6-1.6 (now " .. B.db.scale .. ")") end
     elseif cmd == "borders" then
         B.db.borders = not B.db.borders refresh() B.Print("quality borders " .. (B.db.borders and "on" or "off"))
+    elseif cmd == "options" or cmd == "config" or cmd == "opt" then
+        B.Options.Toggle()
+    elseif cmd == "layout" then
+        if rest == "compact" or rest == "real" then B.db.layout = rest refresh() B.Print("layout: " .. rest)
+        else B.Print("usage: /baggie layout real | compact (now " .. B.db.layout .. ")") end
     elseif cmd == "keyring" then
         B.db.keyring = not B.db.keyring refresh() B.Print("keyring " .. (B.db.keyring and "shown" or "hidden"))
     elseif cmd == "unpin" and rest == "all" then
@@ -193,6 +217,8 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.Print("Alt+click an item, then Alt+click any cell to save the item to that spot.")
         B.Print("Alt+right-click a saved cell to free it. The Pin button does the same without Alt.")
         B.Print("/baggie debug (prints what Baggie sees, for bug reports)")
+        B.Print("/baggie options  (all settings in a window)")
+        B.Print("/baggie layout real | compact   (real = bag order, nothing moves on its own)")
         B.Print("/baggie pins | unpin all | cols N | scale N | borders | keyring | default | reset")
     end
 end)
