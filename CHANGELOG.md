@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.9
+## v0.2.10
 - Baggie is now on Wago Addons, so the Wago app can install and update it.
 
 ## v0.2.8
