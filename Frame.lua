@@ -313,7 +313,11 @@ local function GetButton(bag, slot)
     local parent = MakeBagFrame(bag)
     local name = ("BaggieItem%s_%d"):format(bag < 0 and ("K" .. -bag) or bag, slot)
     local used = "ContainerFrameItemButtonTemplate"
-    local ok, made = pcall(CreateFrame, "Button", name, parent, used)
+    -- Same frame type the game's own bags use ("ItemButton"): with a plain "Button" the template's
+    -- click handler runs on a frame it does not expect, and using a spell item (soul stone,
+    -- grimoire) was blocked as a tainted action.
+    local ok, made = pcall(CreateFrame, "ItemButton", name, parent, used)
+    if not ok or not made then ok, made = pcall(CreateFrame, "Button", name, parent, used) end
     if not ok or not made then
         used = "ItemButtonTemplate"
         ok, made = pcall(CreateFrame, "Button", name, parent, used)
@@ -902,6 +906,8 @@ B.On("ADDON_ACTION_BLOCKED", function(addon, func)
     if addon == ADDON_NAME and B.db then
         B.db.blocked = B.db.blocked or {}
         B.db.blocked[tostring(func)] = (B.db.blocked[tostring(func)] or 0) + 1
-        B.Print("the game blocked: " .. tostring(func) .. " (please send me this)")
+        local kind = "?"
+        for _, b in pairs(buttons) do if b.baggieTemplate then kind = b:GetObjectType() .. "/" .. b.baggieTemplate break end end
+        B.Print("the game blocked: " .. tostring(func) .. " [" .. kind .. "] (please send me this)")
     end
 end)

@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: |cffe0b04aBaggie|r
-## Notes: One bag window for WoW: Forever where you choose where items sit. Save an item to a spot and it stays there. Slash command: /baggie
+## Notes: One bag window for WoW Forever where you choose where items sit: save an item to a spot and it stays there. Search, themes and a keyring. Slash command: /baggie
 ## Author: David
 ## Version: @project-version@
 ## Category: Inventory

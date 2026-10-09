@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.5
+- Right-clicking a soul stone or grimoire (items that cast a spell) could still show the "blocked from an action only available to the Blizzard UI" message. Baggie now builds its item buttons the same way the game's own bags do, and the message names what was blocked.
+
+## v0.2.4
+- Real cause of items jumping after a drop: a saved spot swaps places with the slot in its cell, and if you dropped an item into that swapped-in cell Baggie moved it to the last free cell on the next refresh. Swaps are now plain swaps, so a dropped item stays where you put it.
+- Right-clicking items (recipes, food, anything usable) in Baggie could trigger the game's "blocked from an action only available to the Blizzard UI" message. Baggie no longer attaches anything to the game's item buttons beyond drawing them.
+
 ## v0.2.3
 - Fixes the bag row saying your bag slots are empty: newer game versions moved the bag-slot lookup, so Baggie now uses the new one and falls back to the standard slot numbers.
 - A "Search:" label sits next to the search box.
