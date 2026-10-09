@@ -7,6 +7,7 @@
 ## IconTexture: Interface\AddOns\Baggie\Media\Icon
 ## SavedVariables: BaggieDB
 ## X-License: MIT
+## X-Wago-ID: RNL4eENo
 
 Core.lua
 Layout.lua
