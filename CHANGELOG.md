@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.2.6
+- Fixed the stack count showing twice (one on top of the other); the item buttons now only show Baggie's own count.
+
 ## v0.2.5
 - Right-clicking a soul stone or grimoire (items that cast a spell) could still show the "blocked from an action only available to the Blizzard UI" message. Baggie now builds its item buttons the same way the game's own bags do, and the message names what was blocked.
 

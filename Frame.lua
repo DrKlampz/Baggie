@@ -55,10 +55,6 @@ local function SetIcon(btn, tex)
     elseif type(btn.icon) == "table" then btn.icon:SetTexture(tex) end
 end
 
-local function SetCount(btn, count)
-    if _G.SetItemButtonCount then _G.SetItemButtonCount(btn, count) end
-end
-
 local function SetDesat(btn, on)
     if _G.SetItemButtonDesaturated then _G.SetItemButtonDesaturated(btn, on)
     elseif type(btn.icon) == "table" and btn.icon.SetDesaturated then btn.icon:SetDesaturated(on) end
@@ -82,7 +78,6 @@ local function UpdateButton(btn, text)
     local tex, count, locked, quality, link, id = B.SlotInfo(btn.bag, btn.slot)
     btn.itemID, btn.link = id, link
     pcall(SetIcon, btn, tex)
-    pcall(SetCount, btn, tonumber(count) or 0)
     pcall(SetDesat, btn, locked and true or false)
     if tex then
         btn.baggieIcon:SetTexture(tex)
@@ -241,6 +236,11 @@ end
 local TEMPLATE_GLOWS = { "NewItemTexture", "BattlepayItemTexture", "IconOverlay", "IconOverlay2", "IconBorder",
     "UpgradeIcon", "JunkIcon", "ItemContextOverlay", "searchOverlay", "ExtendedSlot", "flash" }
 QuietTemplate = function(btn)
+    -- the template's own stack count would sit under Baggie's, so keep it hidden
+    local nm = btn.GetName and btn:GetName()
+    for _, c in ipairs({ btn.Count, btn.count, nm and _G[nm .. "Count"] }) do
+        if type(c) == "table" and c.Hide then c:SetText("") c:Hide() end
+    end
     for _, k in ipairs(TEMPLATE_GLOWS) do
         local t = btn[k]
         if type(t) == "table" then
