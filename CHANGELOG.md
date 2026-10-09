@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.2.8
+- Right-click use of items that cast a spell (Lesser Astral Essence, soul stones, grimoires) was still blocked. Baggie no longer replaces the game's bag functions (ToggleBackpack, OpenAllBags and the rest); it hooks them instead and moves the default bag windows out of sight, the way other bag addons do.
+
 ## v0.2.7
 - Windows no longer bleed through each other: clicking the Baggie window or its options raises the whole window above other addon windows.
 

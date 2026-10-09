@@ -839,26 +839,64 @@ end
 ----------------------------------------------------------------------
 -- Taking over the default bag buttons and keys
 ----------------------------------------------------------------------
-local orig = {}
-local NAMES = { "ToggleBackpack", "ToggleBag", "ToggleAllBags", "OpenAllBags", "CloseAllBags",
-                "OpenBackpack", "CloseBackpack", "OpenBag" }
+-- The game's bag functions are never replaced (that taints them, and a tainted bag function in the
+-- game's call chain blocks right-click use of spell items). They are hooked instead: the game's own
+-- bag frames are moved into a hidden holder and Baggie opens, closes or toggles its window.
+local hooked = false
+local blizzHidden
+local lastToggle = 0
+
+local function HideBlizzardBags()
+    if InCombat() then return end
+    if not blizzHidden then
+        blizzHidden = CreateFrame("Frame")
+        blizzHidden:Hide()
+    end
+    for i = 1, 13 do
+        local f = _G["ContainerFrame" .. i]
+        if f then pcall(f.SetParent, f, blizzHidden) end
+    end
+    if _G.ContainerFrameCombinedBags then pcall(_G.ContainerFrameCombinedBags.SetParent, _G.ContainerFrameCombinedBags, blizzHidden) end
+end
+
+local function Hook(name, fn)
+    if type(_G[name]) == "function" then hooksecurefunc(name, fn) end
+end
+
+local function RestoreBlizzardBags()
+    if InCombat() or not blizzHidden then return end
+    local home = _G.ContainerFrameContainer or UIParent
+    for i = 1, 13 do
+        local f = _G["ContainerFrame" .. i]
+        if f then pcall(f.SetParent, f, home) end
+    end
+    if _G.ContainerFrameCombinedBags then pcall(_G.ContainerFrameCombinedBags.SetParent, _G.ContainerFrameCombinedBags, home) end
+end
 
 function F.ApplyOverrides()
-    if B.db.enabled then
-        for _, n in ipairs(NAMES) do
-            if _G[n] and orig[n] == nil then orig[n] = _G[n] end
+    if not B.db.enabled then RestoreBlizzardBags() return end
+    if not hooked then
+        hooked = true
+        local function onToggle()
+            if not B.db.enabled then return end
+            local now = GetTime()
+            if now == lastToggle then return end   -- one key press can reach two of the game's toggles
+            lastToggle = now
+            F.Toggle()
+            HideBlizzardBags()
         end
-        _G.ToggleBackpack = function() F.Toggle() end
-        _G.ToggleBag = function() F.Toggle() end
-        _G.ToggleAllBags = function() F.Toggle() end
-        _G.OpenAllBags = function() F.Open() end
-        _G.CloseAllBags = function() F.Close() end
-        _G.OpenBackpack = function() F.Open() end
-        _G.CloseBackpack = function() F.Close() end
-        _G.OpenBag = function() F.Open() end
-    else
-        for n, f in pairs(orig) do _G[n] = f end
+        local function onOpen() if B.db.enabled then F.Open() HideBlizzardBags() end end
+        local function onClose() if B.db.enabled then F.Close() end end
+        Hook("ToggleBackpack", onToggle)
+        Hook("ToggleBag", onToggle)
+        Hook("ToggleAllBags", onToggle)
+        Hook("OpenAllBags", onOpen)
+        Hook("OpenBackpack", onOpen)
+        Hook("OpenBag", onOpen)
+        Hook("CloseAllBags", onClose)
+        Hook("CloseBackpack", onClose)
     end
+    HideBlizzardBags()
 end
 
 function F.Setup()
