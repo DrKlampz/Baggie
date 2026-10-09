@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.2.7
+- Windows no longer bleed through each other: clicking the Baggie window or its options raises the whole window above other addon windows.
+
 ## v0.2.6
 - Fixed the stack count showing twice (one on top of the other); the item buttons now only show Baggie's own count.
 

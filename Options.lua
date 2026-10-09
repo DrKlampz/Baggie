@@ -213,6 +213,7 @@ end
 local function Build()
     win = CreateFrame("Frame", "BaggieOptions", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     win:SetFrameStrata("DIALOG")
+    win:SetToplevel(true)
     win:SetSize(360, 640)
     win:SetPoint("CENTER")
     win:SetMovable(true) win:EnableMouse(true) win:SetClampedToScreen(true)

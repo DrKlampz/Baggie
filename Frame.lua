@@ -628,6 +628,7 @@ local function Create()
     win = CreateFrame("Frame", "BaggieFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     B.window = win
     win:SetFrameStrata("HIGH")
+    win:SetToplevel(true)   -- clicking raises the window with all its contents above other addon windows
     win:SetClampedToScreen(true)
     win:SetMovable(true)
     win:EnableMouse(true)
