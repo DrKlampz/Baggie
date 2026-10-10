@@ -35,7 +35,7 @@ B.DEFAULTS = {
     ilvl = false,        -- item level on gear
     showSearch = true,
     showFooter = true,
-    showSort = true,
+    showSort = false,    -- off: Baggie never sorts or moves your items by itself
     showPinMark = true,
     ghostAlpha = 0.35,
     lockPos = false,
@@ -216,6 +216,11 @@ B.On("ADDON_LOADED", B.Safe("load", function(name)
     B.db = Merge(BaggieDB, B.DEFAULTS)
     if B.db.borders == false then B.db.borderMode = "none" end   -- older versions
     B.db.borders = nil
+    if not B.db.freeRein then   -- v0.3.0: items stay exactly where you put them; no sorting, no packing
+        B.db.freeRein = true
+        B.db.showSort = false
+        B.db.layout = "real"
+    end
     if B.Frame and B.Frame.Setup then B.Frame.Setup() end
 end))
 
