@@ -35,6 +35,7 @@ B.DEFAULTS = {
     ilvl = false,        -- item level on gear
     showSearch = true,
     showFooter = true,
+    fillFront = true,    -- a new item goes to the first free slot (nothing else moves)
     showSort = true,     -- Sort button: only sorts when you click it
     showPinMark = true,
     ghostAlpha = 0.35,
@@ -370,3 +371,77 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.Print("/baggie pins | unpin all | cols N | scale N | borders | keyring | default | reset")
     end
 end)
+
+----------------------------------------------------------------------
+-- New loot goes to the first free slot (like a bag with no gaps at the front).
+-- Only the item that just arrived is moved; nothing else is ever touched.
+----------------------------------------------------------------------
+function B.FirstFreeCell(cells)   -- cells: list of {bag, slot, filled}
+    for i, c in ipairs(cells) do if not c[3] then return i end end
+end
+
+do
+    local lastUser, prev, busy = 0, nil, false
+    local function Touch() lastUser = (_G.GetTime and _G.GetTime()) or 0 end
+    for _, n in ipairs({ "PickupContainerItem", "SplitContainerItem", "UseContainerItem" }) do
+        if C and C[n] then hooksecurefunc(C, n, Touch) end
+        if _G[n] then hooksecurefunc(n, Touch) end
+    end
+
+    local function Scan()
+        local cells = {}
+        local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
+        for _, bag in ipairs(B.BagIDs()) do
+            local ok = true
+            if gf and bag > 0 then local _, kind = gf(bag) if kind and kind ~= 0 then ok = false end end
+            if ok then
+                for sl = 1, B.NumSlots(bag) do
+                    local _, _, _, _, link = B.SlotInfo(bag, sl)
+                    cells[#cells + 1] = { bag, sl, link ~= nil, link }
+                end
+            end
+        end
+        return cells
+    end
+
+    local function Snapshot(cells)
+        local s, n = {}, 0
+        for _, c in ipairs(cells) do
+            if c[3] then s[c[1] .. ":" .. c[2]] = true n = n + 1 end
+        end
+        return s, n
+    end
+
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("BAG_UPDATE_DELAYED")
+    f:SetScript("OnEvent", B.Safe("fill front", function()
+        if not B.db or busy then return end
+        local cells = Scan()
+        local snap, n = Snapshot(cells)
+        local old, oldN = prev, prev and prev.n or 0
+        prev = snap prev.n = n
+        if not B.db.fillFront or not old then return end
+        if n <= oldN then return end                                   -- nothing new arrived
+        local now = (_G.GetTime and _G.GetTime()) or 0
+        if now - lastUser < 1.5 then return end                        -- you were moving things yourself
+        if (_G.GetCursorInfo and _G.GetCursorInfo()) or (_G.InCombatLockdown and _G.InCombatLockdown()) then return end
+        local free = B.FirstFreeCell(cells)
+        if not free then return end
+        for i = #cells, free + 1, -1 do                                -- new items, last slot first
+            local c = cells[i]
+            local key = c[1] .. ":" .. c[2]
+            if c[3] and not old[key] then
+                local _, _, locked = B.SlotInfo(c[1], c[2])
+                if not locked then
+                    local t = cells[free]
+                    busy = true
+                    B.Pickup(c[1], c[2])
+                    B.Pickup(t[1], t[2])
+                    if _G.GetCursorInfo and _G.GetCursorInfo() then B.Pickup(c[1], c[2]) end
+                    _G.C_Timer.After(0.3, function() busy = false prev = nil end)
+                end
+                return
+            end
+        end
+    end))
+end

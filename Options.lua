@@ -69,6 +69,7 @@ local ROWS = {
     { h = "Window" },
     { key = "showBags", kind = "check", label = "Show bags (your equipped bag slots)" },
     { key = "showSearch", kind = "check", label = "Search box" },
+    { key = "fillFront", kind = "check", label = "New items go to the first free slot" },
     { key = "showSort", kind = "check", label = "Sort button (only sorts when clicked)" },
     { key = "lockPos", kind = "check", label = "Lock window position" },
     { key = "showFooter", kind = "check", label = "Show the bottom line (slots and gold)" },

@@ -1,6 +1,7 @@
 # Changelog
 
 ## v0.3.0
+- New option "New items go to the first free slot" (on by default): when loot or a purchase arrives, only that item is moved into the first empty slot, so no gaps open up at the front on their own. Nothing else is ever touched, and anything you move yourself stays put. Gaps you leave are filled by the next new item.
 - Baggie no longer sorts or moves anything on its own: the layout is plain bag order and new items land wherever the game puts them. The Sort button now uses Baggie's own sort instead of the game's (which left gaps): it only runs when you click it and packs everything to the front, grouped by type, quality, then name. Quivers and special bags are left alone.
 - New layout "Bag order, new items fill gaps" (Options, or `/baggie layout gaps`): every slot stays where it is, but a new item shows in the top-most empty cell instead of wherever the game put it. Nothing is pushed to the front and nothing physically moves. Items you move yourself are left alone.
 
