@@ -29,7 +29,7 @@ B.DEFAULTS = {
     showReagent = true,  -- reagent bag as its own section (if the game has one)
     sectionLabels = true,
     showBags = true,     -- row of your equipped bag slots under the items
-    layout = "real",     -- "real" = bag order, nothing moves; "compact" = items first
+    layout = "real",     -- "real" = bag order, nothing moves; "gaps" = new items fill the top-most gap; "compact" = items first
     alpha = 0.96,        -- window background opacity
     cellSize = 37,
     ilvl = false,        -- item level on gear
@@ -248,8 +248,8 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
     elseif cmd == "options" or cmd == "config" or cmd == "opt" then
         B.Options.Toggle()
     elseif cmd == "layout" then
-        if rest == "compact" or rest == "real" then B.db.layout = rest refresh() B.Print("layout: " .. rest)
-        else B.Print("usage: /baggie layout real | compact (now " .. B.db.layout .. ")") end
+        if rest == "compact" or rest == "real" or rest == "gaps" then B.db.layout = rest refresh() B.Print("layout: " .. rest)
+        else B.Print("usage: /baggie layout real | gaps | compact (now " .. B.db.layout .. ")") end
     elseif cmd == "keyring" then
         B.db.keyring = not B.db.keyring refresh() B.Print("keyring " .. (B.db.keyring and "shown" or "hidden"))
         if B.db.keyring and B.NumSlots(_G.KEYRING_CONTAINER or -2) == 0 then B.Print("this character has no keyring slots to show") end
@@ -273,7 +273,7 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.Print("Alt+click an item to save it to the spot it is in. Alt+click it again to free the spot.")
                 B.Print("/baggie debug (prints what Baggie sees, for bug reports)")
         B.Print("/baggie options  (all settings in a window)")
-        B.Print("/baggie layout real | compact   (real = bag order, nothing moves on its own)")
+        B.Print("/baggie layout real | gaps | compact   (real = bag order, nothing moves on its own; gaps = same, but new items land in the top-most empty cell)")
         B.Print("/baggie pins | unpin all | cols N | scale N | borders | keyring | default | reset")
     end
 end)

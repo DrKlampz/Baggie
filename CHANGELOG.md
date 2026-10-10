@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.3.0
+- New layout "Bag order, new items fill gaps" (Options, or `/baggie layout gaps`): every slot stays where it is, but a new item shows in the top-most empty cell instead of wherever the game put it. Nothing is pushed to the front and nothing physically moves. Items you move yourself are left alone.
+
 ## v0.2.10
 - Baggie is now on Wago Addons, so the Wago app can install and update it.
 

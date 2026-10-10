@@ -29,8 +29,8 @@ end
 -- kind: check | slider | cycle | color
 local ROWS = {
     { h = "Layout" },
-    { key = "layout", kind = "cycle", label = "Item layout", values = { "real", "compact" },
-      names = { real = "Bag order (nothing moves)", compact = "Compact (items first)" } },
+    { key = "layout", kind = "cycle", label = "Item layout", values = { "real", "gaps", "compact" },
+      names = { real = "Bag order (nothing moves)", gaps = "Bag order, new items fill gaps", compact = "Compact (items first)" } },
     { key = "cols", kind = "slider", label = "Columns", min = 4, max = 24, step = 1 },
     { key = "scale", kind = "slider", label = "Window scale", min = 0.6, max = 1.6, step = 0.05, fmt = "%.2f" },
     { key = "cellSize", kind = "slider", label = "Slot size", min = 28, max = 56, step = 1 },

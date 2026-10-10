@@ -454,7 +454,13 @@ local function Relayout(slots, text)
     GAP = math.max(0, math.min(16, tonumber(B.db.gap) or 4))
     PAD = math.max(4, math.min(30, tonumber(B.db.padding) or 12))
     local inset = math.max(0, math.min(10, tonumber(B.db.iconInset) or 2))
-    local cells, count = B.Layout.Build(slots, pins, B.db.layout)
+    -- a new item only goes to the top-most gap when it came from outside (loot, mail, a vendor), not
+    -- while you are moving things around yourself
+    local now = _G.GetTime and _G.GetTime() or 0
+    if _G.GetCursorInfo and _G.GetCursorInfo() then B.lastCursor = now end
+    local allowMove = not (B.lastCursor and now - B.lastCursor < 1.5)
+    B.gapState = B.gapState or {}
+    local cells, count = B.Layout.Build(slots, pins, B.db.layout, B.gapState, allowMove)
     lastCells, lastCount = cells, count
     B.slotsNow = slots
 

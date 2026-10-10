@@ -157,8 +157,69 @@ function L.BuildReal(slots, pins)
     return cells, count
 end
 
-function L.Build(slots, pins, mode)
+-- "Fill gaps": every slot keeps the cell it has, nothing is pushed to the front. The only
+-- difference from real bag order is where a NEW item shows up: in the top-most empty cell
+-- instead of wherever the game happened to put it. This swaps the cells of two EMPTY slots
+-- (invisible), so no item ever moves. st remembers the cell of each slot between refreshes:
+--   st = { perm = { ["bag:slot"] = cell }, prev = { ["bag:slot"] = true if it held an item }, count = n }
+-- allowMove = false (the player is carrying or just dropped an item) leaves new items where they are.
+function L.BuildGaps(slots, pins, st, allowMove)
+    local n = #slots
+    st = st or {}
+    local keys = {}
+    for i = 1, n do keys[i] = slots[i].bag .. ":" .. slots[i].slot end
+    local same = st.perm ~= nil and st.n == n
+    if same then for i = 1, n do if st.perm[keys[i]] == nil then same = false break end end end
+    if not same then
+        st.perm, st.prev, st.n = {}, nil, n
+        for i = 1, n do st.perm[keys[i]] = i end
+    end
+    local filled, rose = {}, 0
+    for i = 1, n do
+        if slots[i].itemID then filled[keys[i]] = true end
+    end
+    if st.prev and allowMove then
+        local before, after = 0, 0
+        for _ in pairs(st.prev) do before = before + 1 end
+        for _ in pairs(filled) do after = after + 1 end
+        rose = after - before
+        if rose > 0 then
+            local owner = {}                                -- cell -> slot index
+            for i = 1, n do owner[st.perm[keys[i]]] = i end
+            for i = 1, n do
+                if rose > 0 and filled[keys[i]] and not st.prev[keys[i]] then
+                    local cur = st.perm[keys[i]]
+                    for c = 1, cur - 1 do
+                        local o = owner[c]
+                        if o and not slots[o].itemID then
+                            st.perm[keys[i]], st.perm[keys[o]] = c, cur
+                            owner[c], owner[cur] = i, o
+                            break
+                        end
+                    end
+                    rose = rose - 1
+                end
+            end
+        end
+    end
+    st.prev = filled
+
+    local ordered, orig = {}, {}
+    for i = 1, n do
+        local c = st.perm[keys[i]]
+        ordered[c], orig[c] = slots[i], i
+    end
+    local cells, count = L.BuildReal(ordered, pins)
+    for c = 1, count do
+        local x = cells[c]
+        if x and x.kind == "slot" then cells[c] = { kind = "slot", index = orig[x.index] } end
+    end
+    return cells, count
+end
+
+function L.Build(slots, pins, mode, st, allowMove)
     if mode == "compact" then return L.BuildCompact(slots, pins) end
+    if mode == "gaps" then return L.BuildGaps(slots, pins, st, allowMove) end
     return L.BuildReal(slots, pins)
 end
 
