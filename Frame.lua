@@ -679,7 +679,7 @@ local function Create()
 
     win.sortBtn = Button(win, "Sort", 46, function()
         local ok, err = pcall(B.SortBags)
-        if not ok then B.Print("sort error: " .. tostring(err)) end
+        if not ok then B.Say("sort error: " .. tostring(err)) end
     end)
     win.sortBtn:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -33)
 

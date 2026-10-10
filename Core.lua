@@ -160,10 +160,15 @@ function B.PlanSort(cur)
 end
 
 local sorting = false
+function B.Say(msg)   -- chat line plus a message in the middle of the screen
+    B.Print(msg)
+    if _G.UIErrorsFrame and _G.UIErrorsFrame.AddMessage then _G.UIErrorsFrame:AddMessage("Baggie: " .. tostring(msg), 1, 0.85, 0.2) end
+end
+
 function B.SortBags()
-    if sorting then B.Print("already sorting") return end
-    if _G.InCombatLockdown and _G.InCombatLockdown() then B.Print("can't sort in combat") return end
-    if _G.GetCursorInfo and _G.GetCursorInfo() then B.Print("put down what you're holding first") return end
+    if sorting then B.Say("already sorting") return end
+    if _G.InCombatLockdown and _G.InCombatLockdown() then B.Say("can't sort in combat") return end
+    if _G.GetCursorInfo and _G.GetCursorInfo() then B.Say("put down what you're holding first") return end
     local cells, cur = {}, {}
     for _, bag in ipairs(B.BagIDs()) do
         local general = true
@@ -177,7 +182,14 @@ function B.SortBags()
                 local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
                 cells[#cells + 1] = { bag, sl }
                 if link then
-                    local name, _, q, _, _, typ, sub = _G.GetItemInfo(link)
+                    local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
+                    local okI, name, _, q, _, _, typ, sub = pcall(gi or function() end, link)
+                    if not okI then name, q, typ, sub = nil end
+                    if not name then name = tostring(link):match("%[(.-)%]") end
+                    if not typ and _G.C_Item and _G.C_Item.GetItemInfoInstant then
+                        local okJ, _, t2, s2 = pcall(_G.C_Item.GetItemInfoInstant, link)
+                        if okJ then typ, sub = t2, s2 end
+                    end
                     q = tonumber(q or quality) or 1
                     cur[#cur + 1] = { key = (tostring(link):match("item:[^|]+") or tostring(id)) .. "x" .. string.format("%05d", tonumber(count) or 1),
                         sk = string.format("%s|%s|%d|%s", tostring(typ or "~"), tostring(sub or ""), 9 - q, tostring(name or "")) }
@@ -188,8 +200,8 @@ function B.SortBags()
         end
     end
     local moves = B.PlanSort(cur)
-    if #moves == 0 then B.Print("already sorted (" .. #cells .. " slots checked)") return end
-    B.Print("sorting: " .. #moves .. " moves")
+    if #moves == 0 then B.Say("already sorted (" .. #cells .. " slots checked)") return end
+    B.Say("sorting: " .. #moves .. " moves")
     sorting = true
     local n, waits = 0, 0
     local step
@@ -203,7 +215,7 @@ function B.SortBags()
         local _, _, lb = B.SlotInfo(b[1], b[2])
         if la or lb or (_G.GetCursorInfo and _G.GetCursorInfo()) then
             waits = waits + 1
-            if waits > 40 then sorting = false B.Print("sort stopped (items stayed locked)") return end
+            if waits > 40 then sorting = false B.Say("sort stopped (items stayed locked)") return end
             n = n - 1
             return _G.C_Timer.After(0.1, step)
         end
@@ -215,7 +227,7 @@ function B.SortBags()
     end
     step = function()
         local ok, err = pcall(stepRaw)
-        if not ok then sorting = false B.Print("sort error: " .. tostring(err)) end
+        if not ok then sorting = false B.Say("sort error: " .. tostring(err)) end
     end
     step()
 end
