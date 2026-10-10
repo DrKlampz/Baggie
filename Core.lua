@@ -129,27 +129,55 @@ end
 ----------------------------------------------------------------------
 -- Sort (only ever runs when you click the Sort button)
 ----------------------------------------------------------------------
--- cur[i] = { key = identity of item+stack, sk = sort key } or false for an empty slot.
--- Returns the list of {from, to} moves that packs everything to the front in sort order.
-function B.PlanSort(cur)
-    local arr, order = {}, {}
-    for i, v in ipairs(cur) do arr[i] = v or false end
-    for i, v in ipairs(arr) do if v then order[#order + 1] = v end end
-    table.sort(order, function(a, b)
-        if a.sk ~= b.sk then return a.sk < b.sk end
-        return a.key < b.key
+-- cur[i] = { key = identity of item+stack, sk = sort key, id = item id } or false for an empty slot,
+-- or { skip = true } for a slot that must not be touched (quiver and other special bags).
+-- fixed[itemID] = position that item is saved to: those items are placed exactly there.
+-- Returns the list of {from, to} moves: saved items in their spots, everything else packed
+-- to the front in sort order, so the empty space ends up at the back.
+function B.PlanSort(cur, fixed)
+    local n = #cur
+    local arr, avail, items = {}, {}, {}
+    for i = 1, n do
+        local v = cur[i]
+        arr[i] = v
+        if not (v and v.skip) then
+            avail[#avail + 1] = i
+            if v then items[#items + 1] = v end
+        end
+    end
+    local isAvail = {}
+    for _, i in ipairs(avail) do isAvail[i] = true end
+    local tgt, used = {}, {}
+    local pinList = {}
+    for id, cell in pairs(fixed or {}) do pinList[#pinList + 1] = { id = id, cell = cell } end
+    table.sort(pinList, function(x, y) if x.cell ~= y.cell then return x.cell < y.cell end return tostring(x.id) < tostring(y.id) end)
+    for _, p in ipairs(pinList) do
+        if isAvail[p.cell] and not tgt[p.cell] then
+            for k, v in ipairs(items) do
+                if not used[k] and v.id == p.id then tgt[p.cell] = v used[k] = true break end
+            end
+        end
+    end
+    local rest = {}
+    for k, v in ipairs(items) do if not used[k] then rest[#rest + 1] = v end end
+    table.sort(rest, function(x, y)
+        if x.sk ~= y.sk then return x.sk < y.sk end
+        return x.key < y.key
     end)
+    local r = 1
+    for _, i in ipairs(avail) do
+        if not tgt[i] then tgt[i] = rest[r] or false r = r + 1 end
+    end
     local moves = {}
-    for i = 1, #arr do
-        local want = order[i] or false
-        local have = arr[i]
-        if (want and have and want.key == have.key) or (not want and not have) then
-            -- already right
-        else
+    for ai, i in ipairs(avail) do
+        local want, have = tgt[i], arr[i]
+        local same = (want and have and want.key == have.key) or (not want and not have)
+        if not same then
             local j
-            for k = i + 1, #arr do
+            for aj = ai + 1, #avail do
+                local k = avail[aj]
                 local c = arr[k]
-                if want and c and c.key == want.key then j = k break end
+                if (want and c and c.key == want.key) or (not want and not c) then j = k break end
             end
             if not j then break end
             moves[#moves + 1] = { j, i }
@@ -177,33 +205,34 @@ function B.SortBags()
             local _, kind = gf(bag)
             if kind and kind ~= 0 then general = false end   -- quivers, soul bags etc. keep their own rules
         end
-        if general then
-            for sl = 1, B.NumSlots(bag) do
-                local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
-                cells[#cells + 1] = { bag, sl }
-                if link then
-                    local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
-                    local okI, name, _, q, _, _, typ, sub = pcall(gi or function() end, link)
-                    if not okI then name, q, typ, sub = nil end
-                    if not name then name = tostring(link):match("%[(.-)%]") end
-                    if not typ and _G.C_Item and _G.C_Item.GetItemInfoInstant then
-                        local okJ, _, t2, s2 = pcall(_G.C_Item.GetItemInfoInstant, link)
-                        if okJ then typ, sub = t2, s2 end
-                    end
-                    q = tonumber(q or quality) or 1
-                    cur[#cur + 1] = { key = (tostring(link):match("item:[^|]+") or tostring(id)) .. "x" .. string.format("%05d", tonumber(count) or 1),
-                        sk = string.format("%s|%s|%d|%s", tostring(typ or "~"), tostring(sub or ""), 9 - q, tostring(name or "")) }
-                else
-                    cur[#cur + 1] = false
+        for sl = 1, B.NumSlots(bag) do
+            cells[#cells + 1] = { bag, sl }                    -- same numbering as the window's cells
+            local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
+            if not general then
+                cur[#cur + 1] = { skip = true }
+            elseif link then
+                local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
+                local okI, name, _, q, _, _, typ, sub = pcall(gi or function() end, link)
+                if not okI then name, q, typ, sub = nil end
+                if not name then name = tostring(link):match("%[(.-)%]") end
+                if not typ and _G.C_Item and _G.C_Item.GetItemInfoInstant then
+                    local okJ, _, t2, s2 = pcall(_G.C_Item.GetItemInfoInstant, link)
+                    if okJ then typ, sub = t2, s2 end
                 end
+                q = tonumber(q or quality) or 1
+                cur[#cur + 1] = { id = id, key = (tostring(link):match("item:[^|]+") or tostring(id)) .. "x" .. string.format("%05d", tonumber(count) or 1),
+                    sk = string.format("%s|%s|%d|%s", tostring(typ or "~"), tostring(sub or ""), 9 - q, tostring(name or "")) }
+            else
+                cur[#cur + 1] = false
             end
         end
     end
-    -- saved spots would pull items back out of the packed order on screen, so Sort clears them
-    local pins, cleared = B.Pins(), 0
-    for k in pairs(pins) do pins[k] = nil cleared = cleared + 1 end
-    if cleared > 0 and B.Frame and B.Frame.Refresh then B.Frame.Refresh() end
-    local moves = B.PlanSort(cur)
+    -- items you saved to a spot stay in that spot; everything else is packed around them
+    local fixed = {}
+    for id, p in pairs(B.Pins()) do
+        if type(p) == "table" and type(p.cell) == "number" then fixed[id] = math.floor(p.cell) end
+    end
+    local moves = B.PlanSort(cur, fixed)
     if #moves == 0 then B.Say("already sorted (" .. #cells .. " slots checked)") return end
     B.Say("sorting: " .. #moves .. " moves")
     sorting = true
