@@ -35,7 +35,7 @@ B.DEFAULTS = {
     ilvl = false,        -- item level on gear
     showSearch = true,
     showFooter = true,
-    showSort = false,    -- off: Baggie never sorts or moves your items by itself
+    showSort = true,     -- Sort button: only sorts when you click it
     showPinMark = true,
     ghostAlpha = 0.35,
     lockPos = false,
@@ -123,6 +123,94 @@ function B.BagIDs()
     local last = tonumber(_G.NUM_BAG_SLOTS) or 4
     for b = 1, last do ids[#ids + 1] = b end
     return ids
+end
+
+----------------------------------------------------------------------
+-- Sort (only ever runs when you click the Sort button)
+----------------------------------------------------------------------
+-- cur[i] = { key = identity of item+stack, sk = sort key } or false for an empty slot.
+-- Returns the list of {from, to} moves that packs everything to the front in sort order.
+function B.PlanSort(cur)
+    local arr, order = {}, {}
+    for i, v in ipairs(cur) do arr[i] = v or false end
+    for i, v in ipairs(arr) do if v then order[#order + 1] = v end end
+    table.sort(order, function(a, b)
+        if a.sk ~= b.sk then return a.sk < b.sk end
+        return a.key < b.key
+    end)
+    local moves = {}
+    for i = 1, #arr do
+        local want = order[i] or false
+        local have = arr[i]
+        if (want and have and want.key == have.key) or (not want and not have) then
+            -- already right
+        else
+            local j
+            for k = i + 1, #arr do
+                local c = arr[k]
+                if want and c and c.key == want.key then j = k break end
+            end
+            if not j then break end
+            moves[#moves + 1] = { j, i }
+            arr[i], arr[j] = arr[j], arr[i]
+        end
+    end
+    return moves
+end
+
+local sorting = false
+function B.SortBags()
+    if sorting then return end
+    if _G.InCombatLockdown and _G.InCombatLockdown() then B.Print("can't sort in combat") return end
+    if _G.GetCursorInfo and _G.GetCursorInfo() then B.Print("put down what you're holding first") return end
+    local cells, cur = {}, {}
+    for _, bag in ipairs(B.BagIDs()) do
+        local general = true
+        local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
+        if gf and bag > 0 then
+            local _, kind = gf(bag)
+            if kind and kind ~= 0 then general = false end   -- quivers, soul bags etc. keep their own rules
+        end
+        if general then
+            for sl = 1, B.NumSlots(bag) do
+                local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
+                cells[#cells + 1] = { bag, sl }
+                if link then
+                    local name, _, q, _, _, typ, sub = _G.GetItemInfo(link)
+                    q = tonumber(q or quality) or 1
+                    cur[#cur + 1] = { key = (tostring(link):match("item:[^|]+") or tostring(id)) .. "x" .. string.format("%05d", tonumber(count) or 1),
+                        sk = string.format("%s|%s|%d|%s", tostring(typ or "~"), tostring(sub or ""), 9 - q, tostring(name or "")) }
+                else
+                    cur[#cur + 1] = false
+                end
+            end
+        end
+    end
+    local moves = B.PlanSort(cur)
+    if #moves == 0 then B.Print("already sorted") return end
+    sorting = true
+    local n, waits = 0, 0
+    local function step()
+        if _G.InCombatLockdown and _G.InCombatLockdown() then sorting = false return end
+        n = n + 1
+        local m = moves[n]
+        if not m then sorting = false if B.Frame and B.Frame.Refresh then B.Frame.Refresh() end return end
+        local a, b = cells[m[1]], cells[m[2]]
+        local _, _, la = B.SlotInfo(a[1], a[2])
+        local _, _, lb = B.SlotInfo(b[1], b[2])
+        if la or lb or (_G.GetCursorInfo and _G.GetCursorInfo()) then
+            waits = waits + 1
+            if waits > 40 then sorting = false B.Print("sort stopped (items stayed locked)") return end
+            n = n - 1
+            return _G.C_Timer.After(0.1, step)
+        end
+        waits = 0
+        B.Pickup(a[1], a[2])
+        B.Pickup(b[1], b[2])
+        if _G.GetCursorInfo and _G.GetCursorInfo() then B.Pickup(a[1], a[2]) end
+        _G.C_Timer.After(0.12, step)
+    end
+    step()
 end
 
 -- inventory slot number of an equipped bag (the game moved this function into C_Container)
@@ -216,9 +304,9 @@ B.On("ADDON_LOADED", B.Safe("load", function(name)
     B.db = Merge(BaggieDB, B.DEFAULTS)
     if B.db.borders == false then B.db.borderMode = "none" end   -- older versions
     B.db.borders = nil
-    if not B.db.freeRein then   -- v0.3.0: items stay exactly where you put them; no sorting, no packing
-        B.db.freeRein = true
-        B.db.showSort = false
+    if not B.db.freeRein2 then   -- v0.3.0: plain bag order, nothing moves by itself; Sort only on click
+        B.db.freeRein2 = true
+        B.db.showSort = true
         B.db.layout = "real"
     end
     if B.Frame and B.Frame.Setup then B.Frame.Setup() end

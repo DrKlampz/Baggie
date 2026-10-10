@@ -606,8 +606,7 @@ function F.ApplyLook()
     win.money:SetFont("Fonts\\FRIZQT__.TTF", fs, "")
     win.search:SetShown(B.db.showSearch)
     win.searchLabel:SetShown(B.db.showSearch)
-    local hasSort = (_G.C_Container and _G.C_Container.SortBags) or _G.SortBags
-    win.sortBtn:SetShown(B.db.showSort and hasSort and true or false)
+    win.sortBtn:SetShown(B.db.showSort and true or false)
     win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
     F.ApplyScale()
 end
@@ -679,11 +678,9 @@ local function Create()
     win.searchLabel:SetText("Search:")
 
     win.sortBtn = Button(win, "Sort", 46, function()
-        local c = _G.C_Container
-        if c and c.SortBags then c.SortBags() elseif _G.SortBags then _G.SortBags() end
+        B.SortBags()
     end)
     win.sortBtn:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -33)
-    if not ((_G.C_Container and _G.C_Container.SortBags) or _G.SortBags) then win.sortBtn:Hide() end
 
     win.sellBtn = Button(win, "Sell junk", 62, function() F.SellJunk() end)
     win.sellBtn:SetPoint("LEFT", win.sortBtn, "RIGHT", 4, 0)

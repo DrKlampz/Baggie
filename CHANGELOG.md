@@ -1,7 +1,7 @@
 # Changelog
 
 ## v0.3.0
-- Baggie no longer sorts or moves anything on its own. The Sort button is off by default (it called the game's sort, which is what left gaps), and the layout resets to "Bag order", so every item stays exactly where you put it. Drag items wherever you like; both can be turned back on in Options.
+- Baggie no longer sorts or moves anything on its own: the layout is plain bag order and new items land wherever the game puts them. The Sort button now uses Baggie's own sort instead of the game's (which left gaps): it only runs when you click it and packs everything to the front, grouped by type, quality, then name. Quivers and special bags are left alone.
 - New layout "Bag order, new items fill gaps" (Options, or `/baggie layout gaps`): every slot stays where it is, but a new item shows in the top-most empty cell instead of wherever the game put it. Nothing is pushed to the front and nothing physically moves. Items you move yourself are left alone.
 
 ## v0.2.10
