@@ -161,7 +161,7 @@ end
 
 local sorting = false
 function B.SortBags()
-    if sorting then return end
+    if sorting then B.Print("already sorting") return end
     if _G.InCombatLockdown and _G.InCombatLockdown() then B.Print("can't sort in combat") return end
     if _G.GetCursorInfo and _G.GetCursorInfo() then B.Print("put down what you're holding first") return end
     local cells, cur = {}, {}
@@ -188,10 +188,12 @@ function B.SortBags()
         end
     end
     local moves = B.PlanSort(cur)
-    if #moves == 0 then B.Print("already sorted") return end
+    if #moves == 0 then B.Print("already sorted (" .. #cells .. " slots checked)") return end
+    B.Print("sorting: " .. #moves .. " moves")
     sorting = true
     local n, waits = 0, 0
-    local function step()
+    local step
+    local function stepRaw()
         if _G.InCombatLockdown and _G.InCombatLockdown() then sorting = false return end
         n = n + 1
         local m = moves[n]
@@ -210,6 +212,10 @@ function B.SortBags()
         B.Pickup(b[1], b[2])
         if _G.GetCursorInfo and _G.GetCursorInfo() then B.Pickup(a[1], a[2]) end
         _G.C_Timer.After(0.12, step)
+    end
+    step = function()
+        local ok, err = pcall(stepRaw)
+        if not ok then sorting = false B.Print("sort error: " .. tostring(err)) end
     end
     step()
 end
