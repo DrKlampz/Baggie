@@ -199,6 +199,10 @@ function B.SortBags()
             end
         end
     end
+    -- saved spots would pull items back out of the packed order on screen, so Sort clears them
+    local pins, cleared = B.Pins(), 0
+    for k in pairs(pins) do pins[k] = nil cleared = cleared + 1 end
+    if cleared > 0 and B.Frame and B.Frame.Refresh then B.Frame.Refresh() end
     local moves = B.PlanSort(cur)
     if #moves == 0 then B.Say("already sorted (" .. #cells .. " slots checked)") return end
     B.Say("sorting: " .. #moves .. " moves")
