@@ -766,6 +766,17 @@ function F.ApplyLook()
     win.search:SetShown(B.db.showSearch)
     win.searchLabel:SetShown(B.db.showSearch)
     win.sortBtn:SetShown(B.db.showSort and true or false)
+    if win.keyBtn then
+        local function Look(b, on)
+            if on then b:SetBackdropColor(0.3, 0.24, 0.1, 1) b:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 1)
+            else b:SetBackdropColor(0.1, 0.1, 0.12, 1) b:SetBackdropBorderColor(0.3, 0.3, 0.35, 1) end
+            b.icon:SetDesaturated(not on)
+        end
+        Look(win.keyBtn, B.db.keyring)
+        Look(win.reagBtn, B.db.showReagent)
+        local r = B.ReagentBagID()
+        win.reagBtn:SetShown(r and B.NumSlots(r) > 0 or false)
+    end
     win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
     F.ApplyScale()
     if B.BankUI then B.BankUI.ApplyLook() end
@@ -846,6 +857,37 @@ local function Create()
     win.sellBtn = Button(win, "Sell junk", 62, function() F.SellJunk() end)
     win.sellBtn:SetPoint("LEFT", win.sortBtn, "RIGHT", 4, 0)
     win.sellBtn:Hide()
+
+    -- quick toggles for the extra sections under the bags: keyring and reagent bag
+    local function Toggle(key, icon, title, tip, anchorTo)
+        local b = CreateFrame("Button", nil, win, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        b:SetSize(22, 22)
+        b:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+        b.icon = b:CreateTexture(nil, "ARTWORK")
+        b.icon:SetTexture(icon)
+        b.icon:SetPoint("TOPLEFT", 2, -2) b.icon:SetPoint("BOTTOMRIGHT", -2, 2)
+        b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+        b.key = key
+        b:SetScript("OnClick", function()
+            B.db[key] = not B.db[key]
+            F.ApplyLook()
+            F.Refresh()
+        end)
+        b:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+            GameTooltip:SetText(title, 1, 1, 1)
+            GameTooltip:AddLine((B.db[key] and "Shown. Click to hide. " or "Hidden. Click to show. ") .. tip, 0.8, 0.8, 0.8, true)
+            GameTooltip:Show()
+        end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        return b
+    end
+    win.keyBtn = Toggle("keyring", "Interface\\Icons\\INV_Misc_Key_14", "Keyring", "", win)
+    win.keyBtn:SetPoint("TOPRIGHT", win, "TOPRIGHT", -12, -32)
+    win.reagBtn = Toggle("showReagent", "Interface\\Icons\\INV_Misc_Bag_08", "Reagent bag", "", win)
+    win.reagBtn:SetPoint("RIGHT", win.keyBtn, "LEFT", -4, 0)
 
     win.search:ClearAllPoints()
     win.search:SetPoint("TOPRIGHT", win, "TOPRIGHT", -34, -33)
