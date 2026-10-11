@@ -54,6 +54,7 @@ local SECTIONS = {
     } },
     { id = "bankwin", title = "Bank window", scope = "bank", rows = {
         { key = "bankReplace", kind = "check", label = "Use Baggie's bank window (reopen the bank to apply)", base = true },
+        { key = "bankSections", kind = "check", label = "Start each bank bag on its own row", base = true },
         { key = "bankCols", kind = "slider", label = "Slots per row", min = 7, max = 24, step = 1 },
         { key = "cellSize", kind = "slider", label = "Slot size", min = 28, max = 56, step = 1 },
         { key = "gap", kind = "slider", label = "Space between slots", min = 0, max = 16, step = 1 },

@@ -30,6 +30,7 @@ B.DEFAULTS = {
     bgNoTint = false,       -- show a texture in its own colors instead of tinting it with the background color
     edgeAlpha = 0.95,       -- opacity of the window border
     titleAlpha = 1,         -- opacity of the title bar
+    bankSections = true,    -- each bank bag starts on its own row
     syncAll = true,         -- the bank and guild bank windows follow the Inventory look
     bankCols = 14,          -- slots per row in the Baggie bank and guild bank windows
     bankReplace = true,     -- use Baggie's bank window instead of the game's
@@ -299,12 +300,17 @@ function B.IsGeneralBag(bag)
         local ok, _, kind = pcall(gf, bag)
         if ok and kind and kind ~= 0 then return false end
     end
-    -- second opinion: the family of the bag item itself
-    local inv = B.BagInvID and B.BagInvID(bag)
+    -- second opinion: what kind of bag item sits in that slot (ordinary bags are container class, subclass 0)
+    local inv
+    if _G.BankButtonIDToInvSlotID and bag > (tonumber(_G.NUM_BAG_SLOTS) or 4) then inv = _G.BankButtonIDToInvSlotID(bag - (tonumber(_G.NUM_BAG_SLOTS) or 4), 1) end
+    inv = inv or (B.BagInvID and B.BagInvID(bag))
     local link = inv and _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", inv)
-    if link then
-        local fam = (_G.C_Item and _G.C_Item.GetItemFamily and _G.C_Item.GetItemFamily(link)) or (_G.GetItemFamily and _G.GetItemFamily(link))
-        if tonumber(fam) and fam ~= 0 then return false end
+    if link and _G.C_Item and _G.C_Item.GetItemInfoInstant then
+        local ok, _, _, _, _, _, classID, subID = pcall(_G.C_Item.GetItemInfoInstant, link)
+        if ok and classID then
+            if classID ~= 1 then return false end        -- quiver, ammo pouch
+            if (tonumber(subID) or 0) ~= 0 then return false end   -- herb, enchanting, engineering, mining, soul ...
+        end
     end
     return true
 end

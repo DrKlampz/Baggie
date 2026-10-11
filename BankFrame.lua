@@ -157,7 +157,7 @@ local function BankRefreshRaw()
         local num = B.NumSlots(bag)
         if num > 0 then
             -- every bag starts on its own row, with a little extra room above it
-            if not first then
+            if not first and B.db.bankSections ~= false then
                 if col ~= 0 then col, row = 0, row + 1 end
                 secExtra = secExtra + 8
             end
