@@ -30,7 +30,7 @@ function O.ApplyPreset(id)
     B.db.titleColor, B.db.slotColor = Copy(p.title), Copy(p.slot)
 end
 
--- kind: check | slider | cycle | color
+-- kind: check | slider | cycle | color | text
 local ROWS = {
     { h = "Layout" },
     { key = "layout", kind = "cycle", label = "Item layout", values = { "real", "gaps", "compact" },
@@ -42,17 +42,29 @@ local ROWS = {
     { key = "gap", kind = "slider", label = "Space between slots", min = 0, max = 16, step = 1 },
     { key = "padding", kind = "slider", label = "Window padding", min = 4, max = 30, step = 1 },
 
+    { h = "Bank and guild bank" },
+    { key = "bankReplace", kind = "check", label = "Use Baggie's bank window (reopen the bank to apply)" },
+    { key = "guildBankReplace", kind = "check", label = "Use Baggie's guild bank window (reopen to apply)" },
+    { key = "bankCols", kind = "slider", label = "Slots per row in the bank windows", min = 7, max = 24, step = 1 },
+
     { h = "Colors" },
     { key = "preset", kind = "cycle", label = "Theme", values = PRESET_ORDER, preset = true },
     { key = "bgColor", kind = "color", label = "Window background" },
-    { key = "alpha", kind = "slider", label = "Background opacity", min = 0.2, max = 1, step = 0.02, fmt = "%.2f" },
+    { key = "alpha", kind = "slider", label = "Window opacity (background and texture)", min = 0, max = 1, step = 0.02, fmt = "%.2f" },
     { key = "edgeColor", kind = "color", label = "Window border and title" },
     { key = "titleColor", kind = "color", label = "Title bar" },
     { key = "slotColor", kind = "color", label = "Slot background" },
 
     { h = "Window look" },
-    { key = "bgStyle", kind = "cycle", label = "Background", values = { "solid", "dark", "parchment", "marble", "rock", "tooltip" },
-      names = { solid = "Solid color", dark = "Dark panel texture", parchment = "Parchment texture", marble = "Marble texture", rock = "Rock texture", tooltip = "Tooltip texture" } },
+    { key = "bgStyle", kind = "cycle", label = "Background", values = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient", "custom" },
+      names = { solid = "Solid color", dark = "Dark panel texture", parchment = "Parchment texture", marble = "Marble texture", rock = "Rock texture",
+        tooltip = "Tooltip texture", leather = "Leather texture", stone = "Stone texture", linen = "Linen texture", carbon = "Carbon fiber texture",
+        brushed = "Brushed metal texture", gradient = "Fade (light to dark)", custom = "Custom texture (type a path below)" } },
+    { key = "bgCustom", kind = "text", label = "Custom texture: a file path, or a SharedMedia background name",
+      hint = "Interface\\AddOns\\SomeAddon\\texture  (no .tga needed)" },
+    { key = "bgNoTint", kind = "check", label = "Show textures in their own colors (no tint)" },
+    { key = "edgeAlpha", kind = "slider", label = "Border opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+    { key = "titleAlpha", kind = "slider", label = "Title bar opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
     { key = "edgeStyle", kind = "cycle", label = "Window border", values = { "line", "tooltip", "none" },
       names = { line = "Thin line", tooltip = "Tooltip style", none = "None" } },
     { key = "edgeSize", kind = "slider", label = "Line border thickness", min = 1, max = 6, step = 1 },
@@ -165,6 +177,26 @@ local function PickColor(key, done)
     end
 end
 
+-- color <-> text, so a color can be copied to and pasted from other add-ons
+local function ToHex(c)
+    local function h(v) return ("%02X"):format(math.floor(math.max(0, math.min(1, tonumber(v) or 0)) * 255 + 0.5)) end
+    return "#" .. h(c[1]) .. h(c[2]) .. h(c[3])
+end
+local function FromText(str)
+    if type(str) ~= "string" then return end
+    str = str:gsub("^%s+", ""):gsub("%s+$", "")
+    local hex = str:match("^#?(%x%x%x%x%x%x)$") or str:match("^#?%x%x(%x%x%x%x%x%x)$") or str:match("^|c%x%x(%x%x%x%x%x%x)")
+    if hex then
+        return { tonumber(hex:sub(1, 2), 16) / 255, tonumber(hex:sub(3, 4), 16) / 255, tonumber(hex:sub(5, 6), 16) / 255 }
+    end
+    local a, b, c = str:match("^[{%[(]?%s*([%d%.]+)[%s,;]+([%d%.]+)[%s,;]+([%d%.]+)")
+    a, b, c = tonumber(a), tonumber(b), tonumber(c)
+    if a and b and c then
+        if a > 1 or b > 1 or c > 1 then a, b, c = a / 255, b / 255, c / 255 end
+        return { math.min(1, a), math.min(1, b), math.min(1, c) }
+    end
+end
+
 local menu, catcher
 
 local function CloseMenu()
@@ -252,6 +284,9 @@ Sync = function()
         elseif row.kind == "color" then
             local c = v or B.DEFAULTS[row.key]
             w.f.tex:SetVertexColor(c[1], c[2], c[3], 1)
+            if w.hex and not w.hex:HasFocus() then w.hex:SetText(ToHex(c)) end
+        elseif row.kind == "text" then
+            if not w.f:HasFocus() then w.f:SetText(type(v) == "string" and v or "") end
         end
     end
 end
@@ -363,12 +398,84 @@ local function Build()
             local lbl = body:CreateFontString(nil, "OVERLAY")
             lbl:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
             lbl:SetPoint("LEFT", sw, "RIGHT", 8, 0)
-            lbl:SetText(row.label .. "  (click to change)")
+            lbl:SetText(row.label)
+            -- copy / paste box: click it, Ctrl+C to copy, Ctrl+V to paste, Enter to apply
+            local eb = CreateFrame("EditBox", nil, body, BackdropTemplateMixin and "BackdropTemplate" or nil)
+            eb:SetSize(84, 18)
+            eb:SetPoint("TOPLEFT", 38, y - 26)
+            eb:SetAutoFocus(false)
+            eb:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+            eb:SetTextInsets(5, 5, 0, 0)
+            eb:SetMaxLetters(24)
+            eb:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1,
+                insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+            eb:SetBackdropColor(0, 0, 0, 0.6)
+            eb:SetBackdropBorderColor(0.4, 0.4, 0.45, 1)
+            local hint = body:CreateFontString(nil, "OVERLAY")
+            hint:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+            hint:SetTextColor(0.6, 0.6, 0.65)
+            hint:SetPoint("LEFT", eb, "RIGHT", 8, 0)
+            hint:SetText("Ctrl+C copy, Ctrl+V paste, Enter")
+            local function Commit(self)
+                local c = FromText(self:GetText())
+                if c then
+                    B.db[row.key] = c
+                    self:ClearFocus()
+                    Sync() Apply()
+                else
+                    self:SetText(ToHex(B.db[row.key] or B.DEFAULTS[row.key]))
+                    self:ClearFocus()
+                    B.Print("couldn't read that color - use a hex code like #E0B04A, or three numbers like 224 176 74")
+                end
+            end
+            eb:SetScript("OnEnterPressed", Commit)
+            eb:SetScript("OnEditFocusLost", function(self) self:HighlightText(0, 0) end)
+            eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+            eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() Sync() end)
             sw:SetScript("OnClick", function()
                 PickColor(row.key, function() Sync() Apply() end)
             end)
-            widgets[#widgets + 1] = { row = row, f = sw }
-            y = y - 28
+            sw:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT") GameTooltip:SetText("Click to pick a color") GameTooltip:Show()
+            end)
+            sw:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            widgets[#widgets + 1] = { row = row, f = sw, hex = eb }
+            y = y - 50
+        elseif row.kind == "text" then
+            local lbl = body:CreateFontString(nil, "OVERLAY")
+            lbl:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+            lbl:SetPoint("TOPLEFT", 8, y - 3)
+            lbl:SetWidth(296) lbl:SetJustifyH("LEFT")
+            lbl:SetText(row.label)
+            local eb = CreateFrame("EditBox", nil, body, BackdropTemplateMixin and "BackdropTemplate" or nil)
+            eb:SetSize(296, 20)
+            eb:SetPoint("TOPLEFT", 8, y - 30)
+            eb:SetAutoFocus(false)
+            eb:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+            eb:SetTextInsets(5, 5, 0, 0)
+            eb:SetMaxLetters(200)
+            eb:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1,
+                insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+            eb:SetBackdropColor(0, 0, 0, 0.6)
+            eb:SetBackdropBorderColor(0.4, 0.4, 0.45, 1)
+            local function Commit(self)
+                B.db[row.key] = self:GetText() or ""
+                self:ClearFocus()
+                Apply()
+            end
+            eb:SetScript("OnEnterPressed", Commit)
+            eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() Sync() end)
+            eb:SetScript("OnEditFocusLost", function(self) B.db[row.key] = self:GetText() or "" Apply() end)
+            if row.hint then
+                local h = body:CreateFontString(nil, "OVERLAY")
+                h:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+                h:SetTextColor(0.6, 0.6, 0.65)
+                h:SetPoint("TOPLEFT", 8, y - 54)
+                h:SetWidth(296) h:SetJustifyH("LEFT")
+                h:SetText(row.hint)
+            end
+            widgets[#widgets + 1] = { row = row, f = eb }
+            y = y - (row.hint and 72 or 58)
         end
     end
     body:SetHeight(-y + 20)

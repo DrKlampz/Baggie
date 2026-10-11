@@ -152,3 +152,20 @@ function B.RefreshBankGlows()
     pcall(RefreshBank)
     pcall(RefreshGuildBank)
 end
+
+-- used by the Baggie bank and guild bank windows (BankFrame.lua), which carry their own glow texture
+function B.GuildGlowKind(link)
+    if link and ClassOf(link) == 12 then return "quest" end
+end
+
+function B.GlowButton(btn, kind, quality, cell, hasItem)
+    local g = btn.glow
+    if not g then return end
+    local r, gg, b
+    if hasItem then r, gg, b = Color(kind, quality) end
+    if not r then g:Hide() return end
+    local w = tonumber(cell) or btn:GetWidth() or 37
+    g:SetSize(w * 1.75, w * 1.75)
+    g:SetVertexColor(r, gg, b, math.max(0.1, math.min(1, tonumber(B.db.glowStrength) or 0.8)))
+    g:Show()
+end

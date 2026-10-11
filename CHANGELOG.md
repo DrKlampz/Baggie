@@ -1,6 +1,10 @@
 # Changelog
 
 ## v0.4.0
+- The bank and the guild bank now open as Baggie windows: same look, search, junk dimming, item level and glows as your bags, with your bank bags in one window, a bag-slot row and a Buy bag slot button; the guild bank has its tabs plus Deposit and Withdraw. Slots per row is adjustable. If anything goes wrong, the game's own bank window is put back, and Options can turn each replacement off.
+- Window background: six new textures (leather, stone, linen, carbon fiber, brushed metal, a light-to-dark fade), a Custom texture choice that takes any file path or a SharedMedia background name, and an option to show textures in their own colors instead of tinted.
+- Opacity: the window opacity slider now goes down to fully clear, and the border and title bar have their own opacity sliders.
+- Every color has a hex box (for example #E0B04A): copy it with Ctrl+C or paste one from another add-on with Ctrl+V and press Enter. It also reads three numbers such as 224 176 74.
 - Minimap button: click to open or close your bags, right-click for options, drag to move it. The Options button is gone from the bag window (`/baggie options` still works, and `/baggie minimap` hides or shows the button).
 - Much more customization in Options: window background texture (solid, dark panel, parchment, marble, rock, tooltip), window border style and thickness, optional title bar, title text, size and font, slot background style and opacity, trimmed icon edges, fonts, stack count and item level size and corner, item level colored by quality, grey item opacity, saved-spot mark color and size, and four more themes (Ember, Void purple, Frost, Black and white).
 - Item glows (Options > Item glows): quest items, and items that start a quest, glow gold in your bags so you can spot them at a glance. Optional glows for high-quality items (choose the quality it starts at) and for new arrivals, which glow until you point at them. A brightness slider controls all of them.

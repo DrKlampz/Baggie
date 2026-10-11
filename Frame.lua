@@ -211,7 +211,7 @@ local function UpdateButton(btn, text)
 
     -- the little pin mark: this item type has a saved spot
     local pins = B.Pins()
-    btn.pinMark:SetShown(B.db.showPinMark and id ~= nil and pins[id] ~= nil)
+    btn.pinMark:SetShown(not btn.noPins and B.db.showPinMark and id ~= nil and pins[id] ~= nil)
     if id and pins[id] then
         if tex then pins[id].icon = tex end
         local n = ItemName(link)
@@ -693,14 +693,36 @@ local BG_STYLES = {
     marble    = { "Interface\\FrameGeneral\\UI-Background-Marble", true, 256 },
     rock      = { "Interface\\FrameGeneral\\UI-Background-Rock", true, 256 },
     tooltip   = { "Interface\\Tooltips\\UI-Tooltip-Background", true, 16 },
+    leather   = { "Interface\\AddOns\\Baggie\\Media\\Tex_Leather", true, 256 },
+    stone     = { "Interface\\AddOns\\Baggie\\Media\\Tex_Stone", true, 256 },
+    linen     = { "Interface\\AddOns\\Baggie\\Media\\Tex_Linen", true, 256 },
+    carbon    = { "Interface\\AddOns\\Baggie\\Media\\Tex_Carbon", true, 128 },
+    brushed   = { "Interface\\AddOns\\Baggie\\Media\\Tex_Brushed", true, 256 },
+    gradient  = { "Interface\\AddOns\\Baggie\\Media\\Tex_Gradient", false, 0 },
 }
 
-function F.ApplyLook()
-    if not win or not B.db then return end
-    B.styleVer = B.styleVer + 1
+-- "custom": a texture path typed by the player, or the name of a background registered with SharedMedia
+local function CustomTexture()
+    local v = B.db.bgCustom
+    if type(v) ~= "string" then return end
+    v = v:gsub("^%s+", ""):gsub("%s+$", "")
+    if v == "" then return end
+    local LSM = _G.LibStub and _G.LibStub("LibSharedMedia-3.0", true)
+    if LSM then
+        local ok, path = pcall(LSM.Fetch, LSM, "background", v, true)
+        if ok and path then return path end
+    end
+    return (v:gsub("/", "\\"))
+end
+
+-- Background, border, title bar and title of any Baggie window (bags, bank, guild bank)
+function F.StyleFrame(w, title)
     local bg, edge, tc = B.db.bgColor or B.DEFAULTS.bgColor, B.db.edgeColor or B.DEFAULTS.edgeColor, B.db.titleColor or B.DEFAULTS.titleColor
-    -- window background and border
     local bs = BG_STYLES[B.db.bgStyle] or BG_STYLES.solid
+    if B.db.bgStyle == "custom" then
+        local path = CustomTexture()
+        bs = path and { path, true, 256 } or BG_STYLES.solid
+    end
     local es = math.max(1, math.min(6, tonumber(B.db.edgeSize) or 1))
     local backdrop = { bgFile = bs[1], tile = bs[2], tileSize = bs[3] }
     local inset = 0
@@ -712,21 +734,31 @@ function F.ApplyLook()
         backdrop.edgeFile, backdrop.edgeSize, inset = "Interface\\Buttons\\WHITE8X8", es, es
     end
     backdrop.insets = { left = inset, right = inset, top = inset, bottom = inset }
-    win:SetBackdrop(backdrop)
-    win:SetBackdropColor(bg[1], bg[2], bg[3], tonumber(B.db.alpha) or 0.96)
-    win:SetBackdropBorderColor(edge[1], edge[2], edge[3], 0.95)
-    -- title bar
-    win.bar:ClearAllPoints()
+    w:SetBackdrop(backdrop)
+    local textured = bs ~= BG_STYLES.solid
+    if textured and B.db.bgNoTint then
+        w:SetBackdropColor(1, 1, 1, tonumber(B.db.alpha) or 0.96)
+    else
+        w:SetBackdropColor(bg[1], bg[2], bg[3], tonumber(B.db.alpha) or 0.96)
+    end
+    w:SetBackdropBorderColor(edge[1], edge[2], edge[3], tonumber(B.db.edgeAlpha) or 0.95)
+    w.bar:ClearAllPoints()
     local bi = math.max(1, inset)
-    win.bar:SetPoint("TOPLEFT", bi, -bi) win.bar:SetPoint("TOPRIGHT", -bi, -bi)
-    win.bar:SetVertexColor(tc[1], tc[2], tc[3], 1)
-    win.bar:SetShown(B.db.showTitleBar ~= false)
-    win.title:SetTextColor(edge[1], edge[2], edge[3])
-    win.title:SetFont(B.FontPath(B.db.titleFont), tonumber(B.db.titleSize) or 15, "")
+    w.bar:SetPoint("TOPLEFT", bi, -bi) w.bar:SetPoint("TOPRIGHT", -bi, -bi)
+    w.bar:SetVertexColor(tc[1], tc[2], tc[3], tonumber(B.db.titleAlpha) or 1)
+    w.bar:SetShown(B.db.showTitleBar ~= false)
+    w.title:SetTextColor(edge[1], edge[2], edge[3])
+    w.title:SetFont(B.FontPath(B.db.titleFont), tonumber(B.db.titleSize) or 15, "")
+    w.title:SetText(B.db.titleMode == "none" and "" or title)
+end
+
+function F.ApplyLook()
+    if not win or not B.db then return end
+    B.styleVer = B.styleVer + 1
     local mode = B.db.titleMode
-    local name = (mode == "none") and "" or (mode == "bags" and "Bags") or
+    local name = (mode == "bags" and "Bags") or
         (mode == "char" and ((_G.UnitName and _G.UnitName("player") or "Your") .. "'s bags")) or "Baggie"
-    win.title:SetText(name)
+    F.StyleFrame(win, name)
     local fs = tonumber(B.db.footerSize) or 11
     local font = B.FontPath(B.db.font)
     win.free:SetFont(font, fs, "")
@@ -736,6 +768,7 @@ function F.ApplyLook()
     win.sortBtn:SetShown(B.db.showSort and true or false)
     win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
     F.ApplyScale()
+    if B.BankUI then B.BankUI.ApplyLook() end
 end
 
 function F.ApplyScale() if win then win:SetScale(B.db.scale or 1) end end
@@ -954,6 +987,8 @@ function F.Debug()
     if win then P(("window: shown=%s strata=%s level=%s alpha=%s"):format(T(win:IsShown()),
         T(win:GetFrameStrata()), T(win:GetFrameLevel()), T(win:GetAlpha()))) end
 end
+
+F.Decorate, F.UpdateButton, F.QualityColor = Decorate, UpdateButton, QualityColor
 
 function F.Open()
     if not win then return end

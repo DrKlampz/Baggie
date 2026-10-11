@@ -25,7 +25,14 @@ B.DEFAULTS = {
     footerSize = 11,
     junkDim = true,      -- dim grey items
     -- appearance
-    bgStyle = "solid",      -- solid | dark | parchment | marble | rock | tooltip
+    bgStyle = "solid",      -- solid | dark | parchment | marble | rock | tooltip | leather | stone | linen | carbon | brushed | gradient | custom
+    bgCustom = "",          -- texture path (or a SharedMedia background name) used when bgStyle is custom
+    bgNoTint = false,       -- show a texture in its own colors instead of tinting it with the background color
+    edgeAlpha = 0.95,       -- opacity of the window border
+    titleAlpha = 1,         -- opacity of the title bar
+    bankCols = 14,          -- slots per row in the Baggie bank and guild bank windows
+    bankReplace = true,     -- use Baggie's bank window instead of the game's
+    guildBankReplace = true,
     edgeStyle = "line",     -- line | tooltip | none
     edgeSize = 1,           -- thickness of the line border
     showTitleBar = true,
