@@ -74,6 +74,53 @@ local function StyleBorder(b, r, g, bl, size)
     end
 end
 
+-- Is this slot a quest item, or an item that starts a quest? Returns "quest", "starts" or nil.
+local function QuestKind(btn, id)
+    local getQ = (_G.C_Container and _G.C_Container.GetContainerItemQuestInfo) or _G.GetContainerItemQuestInfo
+    if getQ then
+        local ok, a, b, c = pcall(getQ, btn.bag, btn.slot)
+        if ok then
+            local isQuest, questID, active
+            if type(a) == "table" then isQuest, questID, active = a.isQuestItem, a.questID, a.isActive
+            else isQuest, questID, active = a, b, c end
+            if questID and questID > 0 and not active then return "starts" end
+            if isQuest then return "quest" end
+        end
+    end
+    if id and _G.C_Item and _G.C_Item.GetItemInfoInstant then
+        local ok, _, _, _, _, _, classID = pcall(_G.C_Item.GetItemInfoInstant, id)
+        if ok and classID == 12 then return "quest" end
+    end
+end
+
+local lastSeen = {}      -- [bag:slot] = itemID last time this slot was drawn, to spot new arrivals
+local glowArmed = false  -- the first draw after login only records what's already there
+
+local function UpdateGlow(btn, tex, quality, id)
+    local r, g, b
+    if tex and B.db.glowQuest then
+        local kind = QuestKind(btn, id)
+        if kind == "quest" then r, g, b = 1, 0.82, 0.1
+        elseif kind == "starts" then r, g, b = 1, 0.95, 0.4 end
+    end
+    if not r and tex and B.db.glowQuality and (quality or 0) >= (tonumber(B.db.glowMinQuality) or 4) then
+        r, g, b = QualityColor(quality)
+    end
+    local key = btn.bag .. ":" .. btn.slot
+    if tex and id and lastSeen[key] ~= id and glowArmed then btn.baggieNew = true end
+    if not tex then btn.baggieNew = nil end
+    lastSeen[key] = tex and id or nil
+    if not r and tex and B.db.glowNew and btn.baggieNew then r, g, b = 0.4, 1, 0.6 end
+    if r then
+        btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
+        btn.glow:SetVertexColor(r, g, b, math.max(0.1, math.min(1, tonumber(B.db.glowStrength) or 0.8)))
+        btn.glow:Show()
+    else
+        btn.glow:Hide()
+    end
+end
+function B.ArmGlows() glowArmed = true end
+
 local function UpdateButton(btn, text)
     local tex, count, locked, quality, link, id = B.SlotInfo(btn.bag, btn.slot)
     btn.itemID, btn.link = id, link
@@ -106,6 +153,8 @@ local function UpdateButton(btn, text)
     else
         btn.border:Hide()
     end
+
+    UpdateGlow(btn, tex, quality, id)
 
     local dim = 1
     if tex and quality == 0 and B.db.junkDim then dim = 0.55 end
@@ -291,6 +340,15 @@ local function Decorate(btn)
         btn.border.edges[i] = t
     end
     btn.border:Hide()
+
+    -- soft glow around the slot (quest items, quality, new arrivals)
+    btn.glow = btn:CreateTexture(nil, "OVERLAY", nil, 5)
+    btn.glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+    btn.glow:SetBlendMode("ADD")
+    btn.glow:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
+    btn.glow:Hide()
+    if btn.HookScript then btn:HookScript("OnEnter", function(self) if self.baggieNew then self.baggieNew = nil self.glow:Hide() end end) end
 
     btn.pinMark = btn:CreateTexture(nil, "OVERLAY", nil, 7)
     btn.pinMark:SetTexture("Interface\\Buttons\\WHITE8X8")
@@ -562,6 +620,7 @@ function F.Refresh()
     end
     Relayout(slots, text)
     for _, b in pairs(buttons) do if b:IsShown() then UpdateButton(b, text) end end
+    glowArmed = true    -- from now on, an item that wasn't in its slot before counts as new
     Footer(slots)
 end
 

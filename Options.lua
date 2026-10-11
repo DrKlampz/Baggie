@@ -53,6 +53,13 @@ local ROWS = {
     { key = "borderSize", kind = "slider", label = "Border thickness", min = 1, max = 4, step = 1 },
     { key = "borderMinQuality", kind = "slider", label = "Quality borders start at (2 = green)", min = 0, max = 5, step = 1 },
 
+    { h = "Item glows" },
+    { key = "glowQuest", kind = "check", label = "Glow quest items (gold)" },
+    { key = "glowQuality", kind = "check", label = "Glow high-quality items" },
+    { key = "glowMinQuality", kind = "slider", label = "Quality glows start at (4 = epic)", min = 2, max = 6, step = 1 },
+    { key = "glowNew", kind = "check", label = "Glow new items until you point at them" },
+    { key = "glowStrength", kind = "slider", label = "Glow brightness", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
+
     { h = "Items" },
     { key = "junkDim", kind = "check", label = "Dim grey items" },
     { key = "ilvl", kind = "check", label = "Show item level on gear" },
@@ -90,6 +97,7 @@ local widgets = {}
 
 local function Apply()
     if B.Frame then B.Frame.ApplyLook() B.Frame.Refresh() end
+    if B.RefreshBankGlows then B.RefreshBankGlows() end
 end
 
 -- the game's color picker, new and old style

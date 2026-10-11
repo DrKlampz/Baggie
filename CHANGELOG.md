@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.4.0
+- Item glows (Options > Item glows): quest items, and items that start a quest, glow gold in your bags so you can spot them at a glance. Optional glows for high-quality items (choose the quality it starts at) and for new arrivals, which glow until you point at them. A brightness slider controls all of them.
+
 ## v0.3.0
 - New option "New items go to the first free slot" (on by default): when loot or a purchase arrives, only that item is moved into the first empty slot, so no gaps open up at the front on their own. Nothing else is ever touched, and anything you move yourself stays put. Gaps you leave are filled by the next new item.
 - Baggie no longer sorts or moves anything on its own: the layout is plain bag order and new items land wherever the game puts them. The Sort button now uses Baggie's own sort instead of the game's (which left gaps): it only runs when you click it and packs everything to the front, grouped by type, quality, then name. Quivers and special bags are left alone. Items you saved to a spot stay in that spot; everything else is packed around them.

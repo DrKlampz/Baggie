@@ -24,6 +24,11 @@ B.DEFAULTS = {
     goldMode = "icons",     -- icons | text | gold | none
     footerSize = 11,
     junkDim = true,      -- dim grey items
+    glowQuest = true,    -- quest items (and items that start a quest) glow gold
+    glowQuality = false, -- glow items of high quality
+    glowMinQuality = 4,  -- ... from this quality up (4 = epic)
+    glowNew = false,     -- items that just arrived glow until you point at them
+    glowStrength = 0.8,  -- how bright the glows are
     point = nil,         -- saved window position
     keyring = false,
     showReagent = true,  -- reagent bag as its own section (if the game has one)
