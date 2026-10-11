@@ -151,6 +151,7 @@ local SECTIONS = {
         { key = "glowNew", kind = "check", label = "Glow new items until you point at them" },
         { key = "lockPos", kind = "check", label = "Lock window position" },
         { key = "showMinimap", kind = "check", label = "Minimap button (right-click it for options)" },
+        { key = "followGreedUI", kind = "check", label = "Follow GreedUI's colors and look (only when GreedUI is installed)" },
         { key = "showReagent", kind = "check", label = "Show reagent bag (if this game has one)" },
         { key = "keyring", kind = "check", label = "Show keyring (if this character has one)" },
         { key = "sectionLabels", kind = "check", label = "Label and separate those extra sections" },
@@ -179,9 +180,9 @@ local TABS = {
 local FONT = "Fonts\\FRIZQT__.TTF"
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local BW = 420                       -- width of a row
-local PANEL = { 0.075, 0.075, 0.095 }
-local FIELD = { 0.13, 0.13, 0.16 }
-local LINE = { 0.26, 0.26, 0.31 }
+local PANEL = { 0.03, 0.03, 0.035 }
+local FIELD = { 0.06, 0.06, 0.07 }
+local LINE = { 0.34, 0.27, 0.12 }
 local DIM = { 0.62, 0.62, 0.68 }
 
 local views = {}                     -- per tab: { body, items, widgets }
