@@ -74,6 +74,32 @@ local function StyleBorder(b, r, g, bl, size)
     end
 end
 
+-- appearance helpers
+local FONTS = { frizqt = "Fonts\\FRIZQT__.TTF", arial = "Fonts\\ARIALN.TTF", morpheus = "Fonts\\MORPHEUS.TTF", skurri = "Fonts\\SKURRI.TTF" }
+function B.FontPath(key) return FONTS[key] or FONTS.frizqt end
+B.styleVer = 1
+local CORNER = { BOTTOMRIGHT = { -3, 3 }, BOTTOMLEFT = { 3, 3 }, TOPRIGHT = { -2, -3 }, TOPLEFT = { 3, -3 }, CENTER = { 0, 0 } }
+
+-- fonts, sizes, corners and icon crop only change when the settings do
+local function StyleText(btn)
+    if btn.styleVer == B.styleVer then return end
+    btn.styleVer = B.styleVer
+    local font = B.FontPath(B.db.font)
+    local cp = CORNER[B.db.countPos] or CORNER.BOTTOMRIGHT
+    btn.baggieCount:SetFont(font, tonumber(B.db.countSize) or 11, "OUTLINE")
+    btn.baggieCount:ClearAllPoints()
+    btn.baggieCount:SetPoint(B.db.countPos or "BOTTOMRIGHT", cp[1], cp[2])
+    local ip = CORNER[B.db.ilvlPos] or CORNER.TOPRIGHT
+    btn.baggieIlvl:SetFont(font, tonumber(B.db.ilvlSize) or 10, "OUTLINE")
+    btn.baggieIlvl:ClearAllPoints()
+    btn.baggieIlvl:SetPoint(B.db.ilvlPos or "TOPRIGHT", ip[1], ip[2])
+    if B.db.iconCrop then btn.baggieIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92) else btn.baggieIcon:SetTexCoord(0, 1, 0, 1) end
+    local pc = B.db.pinColor or B.DEFAULTS.pinColor
+    local ps = tonumber(B.db.pinSize) or 7
+    btn.pinMark:SetVertexColor(pc[1], pc[2], pc[3], 1)
+    btn.pinMark:SetSize(ps, ps)
+end
+
 -- Is this slot a quest item, or an item that starts a quest? Returns "quest", "starts" or nil.
 local function QuestKind(btn, id)
     local getQ = (_G.C_Container and _G.C_Container.GetContainerItemQuestInfo) or _G.GetContainerItemQuestInfo
@@ -136,10 +162,11 @@ local function UpdateButton(btn, text)
     local n = tonumber(count) or 0
     btn.baggieCount:SetText((tex and n > 1) and tostring(n) or "")
     QuietTemplate(btn)
+    StyleText(btn)
 
     local mode = B.db.borderMode
     local sc = B.db.slotColor or B.DEFAULTS.slotColor
-    btn.baggieBg:SetVertexColor(sc[1], sc[2], sc[3], 1)
+    btn.baggieBg:SetVertexColor(sc[1], sc[2], sc[3], B.db.slotStyle == "none" and 0 or (tonumber(B.db.slotAlpha) or 1))
     local show, br, bg, bb = false
     if tex and mode == "quality" and (quality or 0) >= (tonumber(B.db.borderMinQuality) or 2) then
         show = true br, bg, bb = QualityColor(quality)
@@ -157,7 +184,7 @@ local function UpdateButton(btn, text)
     UpdateGlow(btn, tex, quality, id)
 
     local dim = 1
-    if tex and quality == 0 and B.db.junkDim then dim = 0.55 end
+    if tex and quality == 0 and B.db.junkDim then dim = tonumber(B.db.junkAlpha) or 0.55 end
     if text ~= "" and not Matches(text, link) then dim = 0.25 end
     btn:SetAlpha(dim)
 
@@ -171,6 +198,12 @@ local function UpdateButton(btn, text)
         if ok and tonumber(lvl) and lvl > 1 and equipLoc and equipLoc ~= "" then il = tostring(lvl) end
     end
     btn.baggieIlvl:SetText(il)
+    if il ~= "" and B.db.ilvlQuality then
+        local qr, qg, qb = QualityColor(quality)
+        btn.baggieIlvl:SetTextColor(qr, qg, qb)
+    else
+        btn.baggieIlvl:SetTextColor(1, 0.9, 0.5)
+    end
 
     local start, dur, enable = B.Cooldown(btn.bag, btn.slot)
     local cd = type(btn.Cooldown) == "table" and btn.Cooldown or (type(btn.cooldown) == "table" and btn.cooldown)
@@ -653,16 +686,51 @@ local function RestorePosition()
 end
 
 function F.ResetPosition() if win then RestorePosition() end end
+local BG_STYLES = {
+    solid     = { "Interface\\Buttons\\WHITE8X8", false, 0 },
+    dark      = { "Interface\\DialogFrame\\UI-DialogBox-Background-Dark", true, 32 },
+    parchment = { "Interface\\DialogFrame\\UI-DialogBox-Background", true, 32 },
+    marble    = { "Interface\\FrameGeneral\\UI-Background-Marble", true, 256 },
+    rock      = { "Interface\\FrameGeneral\\UI-Background-Rock", true, 256 },
+    tooltip   = { "Interface\\Tooltips\\UI-Tooltip-Background", true, 16 },
+}
+
 function F.ApplyLook()
     if not win or not B.db then return end
+    B.styleVer = B.styleVer + 1
     local bg, edge, tc = B.db.bgColor or B.DEFAULTS.bgColor, B.db.edgeColor or B.DEFAULTS.edgeColor, B.db.titleColor or B.DEFAULTS.titleColor
+    -- window background and border
+    local bs = BG_STYLES[B.db.bgStyle] or BG_STYLES.solid
+    local es = math.max(1, math.min(6, tonumber(B.db.edgeSize) or 1))
+    local backdrop = { bgFile = bs[1], tile = bs[2], tileSize = bs[3] }
+    local inset = 0
+    if B.db.edgeStyle == "tooltip" then
+        backdrop.edgeFile, backdrop.edgeSize, inset = "Interface\\Tooltips\\UI-Tooltip-Border", 16, 4
+    elseif B.db.edgeStyle == "none" then
+        inset = 0
+    else
+        backdrop.edgeFile, backdrop.edgeSize, inset = "Interface\\Buttons\\WHITE8X8", es, es
+    end
+    backdrop.insets = { left = inset, right = inset, top = inset, bottom = inset }
+    win:SetBackdrop(backdrop)
     win:SetBackdropColor(bg[1], bg[2], bg[3], tonumber(B.db.alpha) or 0.96)
     win:SetBackdropBorderColor(edge[1], edge[2], edge[3], 0.95)
+    -- title bar
+    win.bar:ClearAllPoints()
+    local bi = math.max(1, inset)
+    win.bar:SetPoint("TOPLEFT", bi, -bi) win.bar:SetPoint("TOPRIGHT", -bi, -bi)
     win.bar:SetVertexColor(tc[1], tc[2], tc[3], 1)
+    win.bar:SetShown(B.db.showTitleBar ~= false)
     win.title:SetTextColor(edge[1], edge[2], edge[3])
+    win.title:SetFont(B.FontPath(B.db.titleFont), tonumber(B.db.titleSize) or 15, "")
+    local mode = B.db.titleMode
+    local name = (mode == "none") and "" or (mode == "bags" and "Bags") or
+        (mode == "char" and ((_G.UnitName and _G.UnitName("player") or "Your") .. "'s bags")) or "Baggie"
+    win.title:SetText(name)
     local fs = tonumber(B.db.footerSize) or 11
-    win.free:SetFont("Fonts\\FRIZQT__.TTF", fs, "")
-    win.money:SetFont("Fonts\\FRIZQT__.TTF", fs, "")
+    local font = B.FontPath(B.db.font)
+    win.free:SetFont(font, fs, "")
+    win.money:SetFont(font, fs, "")
     win.search:SetShown(B.db.showSearch)
     win.searchLabel:SetShown(B.db.showSearch)
     win.sortBtn:SetShown(B.db.showSort and true or false)
@@ -746,8 +814,6 @@ local function Create()
     win.sellBtn:SetPoint("LEFT", win.sortBtn, "RIGHT", 4, 0)
     win.sellBtn:Hide()
 
-    win.gear = Button(win, "Options", 54, function() B.Options.Toggle() end)
-    win.gear:SetPoint("TOPRIGHT", win, "TOPRIGHT", -26, -4)
     win.search:ClearAllPoints()
     win.search:SetPoint("TOPRIGHT", win, "TOPRIGHT", -34, -33)
 
@@ -967,6 +1033,7 @@ function F.Setup()
     F.ApplyLook()
     RestorePosition()
     F.ApplyOverrides()
+    if B.Minimap then B.Minimap.Create() end
 end
 
 for _, e in ipairs({ "BAG_UPDATE", "BAG_UPDATE_DELAYED", "BAG_UPDATE_COOLDOWN", "ITEM_LOCK_CHANGED",

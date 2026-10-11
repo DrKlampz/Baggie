@@ -11,9 +11,13 @@ local PRESETS = {
     slate    = { name = "Slate",         bg = { 0.10, 0.10, 0.11 }, edge = { 0.60, 0.60, 0.65 }, title = { 0.17, 0.17, 0.19 }, slot = { 0.17, 0.17, 0.19 } },
     forest   = { name = "Forest",        bg = { 0.04, 0.09, 0.06 }, edge = { 0.45, 0.80, 0.40 }, title = { 0.08, 0.16, 0.10 }, slot = { 0.09, 0.17, 0.12 } },
     crimson  = { name = "Crimson",       bg = { 0.09, 0.04, 0.05 }, edge = { 0.85, 0.25, 0.30 }, title = { 0.20, 0.07, 0.09 }, slot = { 0.17, 0.09, 0.10 } },
+    ember    = { name = "Ember",         bg = { 0.10, 0.05, 0.03 }, edge = { 0.95, 0.55, 0.15 }, title = { 0.22, 0.10, 0.05 }, slot = { 0.19, 0.10, 0.07 } },
+    void     = { name = "Void purple",   bg = { 0.07, 0.04, 0.11 }, edge = { 0.65, 0.40, 0.95 }, title = { 0.16, 0.09, 0.25 }, slot = { 0.15, 0.10, 0.23 } },
+    frost    = { name = "Frost",         bg = { 0.05, 0.09, 0.12 }, edge = { 0.55, 0.88, 0.98 }, title = { 0.09, 0.18, 0.24 }, slot = { 0.10, 0.18, 0.24 } },
+    mono     = { name = "Black and white", bg = { 0.00, 0.00, 0.00 }, edge = { 0.95, 0.95, 0.95 }, title = { 0.12, 0.12, 0.12 }, slot = { 0.10, 0.10, 0.10 } },
     light    = { name = "Parchment",     bg = { 0.85, 0.82, 0.75 }, edge = { 0.45, 0.35, 0.20 }, title = { 0.70, 0.64, 0.50 }, slot = { 0.70, 0.66, 0.58 } },
 }
-local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "light" }
+local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light" }
 O.PRESETS = PRESETS
 
 local function Copy(t) return { t[1], t[2], t[3] } end
@@ -45,6 +49,38 @@ local ROWS = {
     { key = "edgeColor", kind = "color", label = "Window border and title" },
     { key = "titleColor", kind = "color", label = "Title bar" },
     { key = "slotColor", kind = "color", label = "Slot background" },
+
+    { h = "Window look" },
+    { key = "bgStyle", kind = "cycle", label = "Background", values = { "solid", "dark", "parchment", "marble", "rock", "tooltip" },
+      names = { solid = "Solid color", dark = "Dark panel texture", parchment = "Parchment texture", marble = "Marble texture", rock = "Rock texture", tooltip = "Tooltip texture" } },
+    { key = "edgeStyle", kind = "cycle", label = "Window border", values = { "line", "tooltip", "none" },
+      names = { line = "Thin line", tooltip = "Tooltip style", none = "None" } },
+    { key = "edgeSize", kind = "slider", label = "Line border thickness", min = 1, max = 6, step = 1 },
+    { key = "showTitleBar", kind = "check", label = "Show the title bar" },
+    { key = "titleMode", kind = "cycle", label = "Title text", values = { "name", "char", "bags", "none" },
+      names = { name = "Baggie", char = "Your character's bags", bags = "Bags", none = "None" } },
+    { key = "titleSize", kind = "slider", label = "Title size", min = 10, max = 22, step = 1 },
+    { key = "titleFont", kind = "cycle", label = "Title font", values = { "morpheus", "frizqt", "arial", "skurri" },
+      names = { morpheus = "Fancy (Morpheus)", frizqt = "Standard", arial = "Narrow (Arial)", skurri = "Rough (Skurri)" } },
+    { key = "showMinimap", kind = "check", label = "Minimap button (right-click it for options)" },
+
+    { h = "Slots and text" },
+    { key = "font", kind = "cycle", label = "Font for counts, item level and the bottom line", values = { "frizqt", "arial", "morpheus", "skurri" },
+      names = { frizqt = "Standard", arial = "Narrow (Arial)", morpheus = "Fancy (Morpheus)", skurri = "Rough (Skurri)" } },
+    { key = "slotStyle", kind = "cycle", label = "Slot background", values = { "filled", "none" },
+      names = { filled = "Filled", none = "None (icons only)" } },
+    { key = "slotAlpha", kind = "slider", label = "Slot background opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+    { key = "iconCrop", kind = "check", label = "Trim icon edges" },
+    { key = "junkAlpha", kind = "slider", label = "Grey item opacity", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
+    { key = "countSize", kind = "slider", label = "Stack count size", min = 8, max = 18, step = 1 },
+    { key = "countPos", kind = "cycle", label = "Stack count corner", values = { "BOTTOMRIGHT", "BOTTOMLEFT", "TOPRIGHT", "TOPLEFT", "CENTER" },
+      names = { BOTTOMRIGHT = "Bottom right", BOTTOMLEFT = "Bottom left", TOPRIGHT = "Top right", TOPLEFT = "Top left", CENTER = "Center" } },
+    { key = "ilvlSize", kind = "slider", label = "Item level size", min = 8, max = 16, step = 1 },
+    { key = "ilvlPos", kind = "cycle", label = "Item level corner", values = { "TOPRIGHT", "TOPLEFT", "BOTTOMRIGHT", "BOTTOMLEFT", "CENTER" },
+      names = { TOPRIGHT = "Top right", TOPLEFT = "Top left", BOTTOMRIGHT = "Bottom right", BOTTOMLEFT = "Bottom left", CENTER = "Center" } },
+    { key = "ilvlQuality", kind = "check", label = "Color item level by quality" },
+    { key = "pinColor", kind = "color", label = "Saved-spot mark color" },
+    { key = "pinSize", kind = "slider", label = "Saved-spot mark size", min = 4, max = 14, step = 1 },
 
     { h = "Item borders" },
     { key = "borderMode", kind = "cycle", label = "Border style", values = { "quality", "custom", "slots", "none" },
@@ -98,6 +134,7 @@ local widgets = {}
 local function Apply()
     if B.Frame then B.Frame.ApplyLook() B.Frame.Refresh() end
     if B.RefreshBankGlows then B.RefreshBankGlows() end
+    if B.Minimap then B.Minimap.Update() end
 end
 
 -- the game's color picker, new and old style

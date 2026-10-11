@@ -24,6 +24,28 @@ B.DEFAULTS = {
     goldMode = "icons",     -- icons | text | gold | none
     footerSize = 11,
     junkDim = true,      -- dim grey items
+    -- appearance
+    bgStyle = "solid",      -- solid | dark | parchment | marble | rock | tooltip
+    edgeStyle = "line",     -- line | tooltip | none
+    edgeSize = 1,           -- thickness of the line border
+    showTitleBar = true,
+    titleMode = "name",     -- name | char | bags | none
+    titleSize = 15,
+    titleFont = "morpheus", -- morpheus | frizqt | arial | skurri
+    font = "frizqt",        -- font for counts, item level and the bottom line
+    slotStyle = "filled",   -- filled | none
+    slotAlpha = 1,
+    iconCrop = false,       -- trim the icon edges
+    junkAlpha = 0.55,       -- how faded grey items are
+    countSize = 11,
+    countPos = "BOTTOMRIGHT",
+    ilvlSize = 10,
+    ilvlPos = "TOPRIGHT",
+    ilvlQuality = false,    -- color the item level by item quality
+    pinColor = { 0.88, 0.69, 0.29 },
+    pinSize = 7,
+    showMinimap = true,     -- minimap button: click = bags, right-click = options
+    minimapAngle = 200,
     glowQuest = true,    -- quest items (and items that start a quest) glow gold
     glowQuality = false, -- glow items of high quality
     glowMinQuality = 4,  -- ... from this quality up (4 = epic)
@@ -397,6 +419,10 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.Print("item borders: " .. B.db.borderMode)
     elseif cmd == "options" or cmd == "config" or cmd == "opt" then
         B.Options.Toggle()
+    elseif cmd == "minimap" then
+        B.db.showMinimap = not (B.db.showMinimap ~= false)
+        if B.Minimap then B.Minimap.Update() end
+        B.Print("minimap button " .. (B.db.showMinimap and "shown" or "hidden"))
     elseif cmd == "layout" then
         if rest == "compact" or rest == "real" or rest == "gaps" then B.db.layout = rest refresh() B.Print("layout: " .. rest)
         else B.Print("usage: /baggie layout real | gaps | compact (now " .. B.db.layout .. ")") end
@@ -422,7 +448,7 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.Print("/baggie  open or close your bags")
         B.Print("Alt+click an item to save it to the spot it is in. Alt+click it again to free the spot.")
                 B.Print("/baggie debug (prints what Baggie sees, for bug reports)")
-        B.Print("/baggie options  (all settings in a window)")
+        B.Print("/baggie options  (all settings in a window; also right-click the minimap button)")
         B.Print("/baggie layout real | gaps | compact   (real = bag order, nothing moves on its own; gaps = same, but new items land in the top-most empty cell)")
         B.Print("/baggie pins | unpin all | cols N | scale N | borders | keyring | default | reset")
     end

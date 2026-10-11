@@ -1,6 +1,8 @@
 # Changelog
 
 ## v0.4.0
+- Minimap button: click to open or close your bags, right-click for options, drag to move it. The Options button is gone from the bag window (`/baggie options` still works, and `/baggie minimap` hides or shows the button).
+- Much more customization in Options: window background texture (solid, dark panel, parchment, marble, rock, tooltip), window border style and thickness, optional title bar, title text, size and font, slot background style and opacity, trimmed icon edges, fonts, stack count and item level size and corner, item level colored by quality, grey item opacity, saved-spot mark color and size, and four more themes (Ember, Void purple, Frost, Black and white).
 - Item glows (Options > Item glows): quest items, and items that start a quest, glow gold in your bags so you can spot them at a glance. Optional glows for high-quality items (choose the quality it starts at) and for new arrivals, which glow until you point at them. A brightness slider controls all of them.
 
 ## v0.3.0

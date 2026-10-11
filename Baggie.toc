@@ -13,4 +13,5 @@ Core.lua
 Layout.lua
 Frame.lua
 Glow.lua
+Minimap.lua
 Options.lua
