@@ -94,8 +94,18 @@ local SECTIONS = {
         { key = "titleFont", kind = "cycle", label = "Title font", values = { "morpheus", "frizqt", "arial", "skurri" }, names = FONTNAMES },
     } },
     { id = "slots", title = "Slots and text", scope = "all", rows = {
-        { key = "slotStyle", kind = "cycle", label = "Slot background", values = { "filled", "none" }, names = { filled = "Filled", none = "None (icons only)" } },
+        { key = "slotStyle", kind = "cycle", label = "Slot background style", values = { "filled", "gradient", "texture", "game", "none" },
+          names = { filled = "Flat color", gradient = "Gradient (two colors)", texture = "Textured tile", game = "The game's own slot art", none = "None (icons only)" } },
+        { key = "slotColor2", kind = "color", label = "Gradient: second color" },
+        { key = "slotTexture", kind = "cycle", label = "Textured tile", values = { "leather", "stone", "linen", "carbon", "brushed", "marble", "rock", "parchment" },
+          names = { leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon", brushed = "Brushed metal", marble = "Marble", rock = "Rock", parchment = "Parchment" } },
         { key = "slotAlpha", kind = "slider", label = "Slot background opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "slotEmptyAlpha", kind = "slider", label = "Empty slots: share of that opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "slotEdge", kind = "cycle", label = "Slot edge", values = { "none", "line", "bevel", "inset" },
+          names = { none = "None", line = "Thin line", bevel = "Raised bevel", inset = "Sunken inset" } },
+        { key = "slotEdgeColor", kind = "color", label = "Slot edge color (thin line)" },
+        { key = "slotEdgeAlpha", kind = "slider", label = "Slot edge opacity", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "slotEdgeSize", kind = "slider", label = "Slot edge thickness", min = 1, max = 4, step = 1 },
         { key = "iconInset", kind = "slider", label = "Icon padding inside slot", min = 0, max = 10, step = 1 },
         { key = "iconCrop", kind = "check", label = "Trim icon edges" },
         { key = "junkDim", kind = "check", label = "Dim grey items" },
@@ -246,7 +256,7 @@ end
 
 -- the game's color picker (new and old style), with an opacity slider for the colors that have one and a
 -- share box for copying a color to, or pasting one from, other add-ons
-local ALPHA_KEY = { bgColor = "alpha", edgeColor = "edgeAlpha", titleColor = "titleAlpha", slotColor = "slotAlpha" }
+local ALPHA_KEY = { bgColor = "alpha", edgeColor = "edgeAlpha", titleColor = "titleAlpha", slotColor = "slotAlpha", slotEdgeColor = "slotEdgeAlpha" }
 local share
 
 local function Hex2(v) return ("%02X"):format(math.floor(math.max(0, math.min(1, tonumber(v) or 0)) * 255 + 0.5)) end

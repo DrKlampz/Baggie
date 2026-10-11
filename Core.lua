@@ -44,8 +44,15 @@ B.DEFAULTS = {
     titleSize = 15,
     titleFont = "morpheus", -- morpheus | frizqt | arial | skurri
     font = "frizqt",        -- font for counts, item level and the bottom line
-    slotStyle = "filled",   -- filled | none
+    slotStyle = "filled",   -- filled | gradient | texture | game | none
     slotAlpha = 1,
+    slotColor2 = { 0.22, 0.22, 0.28 }, -- second color of the gradient style
+    slotTexture = "leather",           -- tile used by the texture style
+    slotEmptyAlpha = 1,                -- empty slots are drawn at this share of the opacity
+    slotEdge = "none",                 -- none | line | bevel | inset
+    slotEdgeColor = { 0.88, 0.69, 0.29 },
+    slotEdgeAlpha = 0.6,
+    slotEdgeSize = 1,
     iconCrop = false,       -- trim the icon edges
     junkAlpha = 0.55,       -- how faded grey items are
     countSize = 11,
@@ -102,7 +109,7 @@ end
 -- "sync all" is off; the layout keys (slot size, spacing, padding, slots per row) are always their own.
 ----------------------------------------------------------------------
 B.LOOK = {}
-for k in ("bgColor alpha edgeColor titleColor slotColor bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize showTitleBar " ..
+for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
     "borderMode borderColor borderSize borderMinQuality glowQuest glowQuality glowMinQuality glowStrength junkDim ilvl " ..
     "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
@@ -759,4 +766,88 @@ do
             end
         end
     end))
+end
+
+
+----------------------------------------------------------------------
+-- Slot backgrounds: one painter for the bags, bank and guild bank.
+-- bgTex is the slot's background texture, btn the slot button, filled whether an item sits in it.
+----------------------------------------------------------------------
+local SLOT_TILES = {
+    leather = "Interface\\AddOns\\Baggie\\Media\\Tex_Leather", stone = "Interface\\AddOns\\Baggie\\Media\\Tex_Stone",
+    linen = "Interface\\AddOns\\Baggie\\Media\\Tex_Linen", carbon = "Interface\\AddOns\\Baggie\\Media\\Tex_Carbon",
+    brushed = "Interface\\AddOns\\Baggie\\Media\\Tex_Brushed", marble = "Interface\\FrameGeneral\\UI-Background-Marble",
+    rock = "Interface\\FrameGeneral\\UI-Background-Rock", parchment = "Interface\\DialogFrame\\UI-DialogBox-Background",
+}
+B.SLOT_TILES = SLOT_TILES
+local WHITE = "Interface\\Buttons\\WHITE8X8"
+
+local function Shade(c, f) return math.max(0, math.min(1, c * f)) end
+
+function B.PaintSlot(btn, bgTex, filled)
+    local db = B.db
+    if not (bgTex and db) then return end
+    local style = db.slotStyle or "filled"
+    local c = db.slotColor or B.DEFAULTS.slotColor
+    local a = tonumber(db.slotAlpha) or 1
+    if not filled then a = a * (tonumber(db.slotEmptyAlpha) or 1) end
+    if style == "none" then
+        bgTex:SetTexture(WHITE) bgTex:SetVertexColor(c[1], c[2], c[3], 0)
+    elseif style == "gradient" then
+        local c2 = db.slotColor2 or B.DEFAULTS.slotColor2
+        bgTex:SetTexture(WHITE)
+        bgTex:SetVertexColor(1, 1, 1, 1)
+        local done = false
+        if _G.CreateColor and bgTex.SetGradient then
+            done = pcall(bgTex.SetGradient, bgTex, "VERTICAL", CreateColor(c[1], c[2], c[3], a), CreateColor(c2[1], c2[2], c2[3], a))
+        end
+        if not done and bgTex.SetGradientAlpha then
+            pcall(bgTex.SetGradientAlpha, bgTex, "VERTICAL", c[1], c[2], c[3], a, c2[1], c2[2], c2[3], a)
+        end
+    elseif style == "texture" then
+        bgTex:SetTexture(SLOT_TILES[db.slotTexture or "leather"] or SLOT_TILES.leather)
+        bgTex:SetVertexColor(c[1] * 2, c[2] * 2, c[3] * 2, a)
+    elseif style == "game" then
+        bgTex:SetTexture("Interface\\PaperDoll\\UI-Backpack-EmptySlot")
+        bgTex:SetVertexColor(1, 1, 1, a)
+    else
+        bgTex:SetTexture(WHITE)
+        bgTex:SetVertexColor(c[1], c[2], c[3], a)
+    end
+    if style ~= "gradient" and style ~= "game" then bgTex:SetTexCoord(0, 1, 0, 1) end
+    if style == "game" then bgTex:SetTexCoord(0.1, 0.9, 0.1, 0.9) end
+
+    -- edge: a line, a raised bevel or a sunken inset
+    local mode = db.slotEdge or "none"
+    local e = btn.slotEdge
+    if mode == "none" or style == "none" and mode == "inset" then
+        if e then for i = 1, 4 do e[i]:Hide() end end
+        return
+    end
+    if not e then
+        e = {}
+        for i = 1, 4 do
+            e[i] = btn:CreateTexture(nil, "BACKGROUND", nil, 2)
+            e[i]:SetTexture(WHITE)
+        end
+        btn.slotEdge = e
+    end
+    local sz = math.max(1, tonumber(db.slotEdgeSize) or 1)
+    local ea = tonumber(db.slotEdgeAlpha) or 0.6
+    local ec = db.slotEdgeColor or B.DEFAULTS.slotEdgeColor
+    local col = {}
+    if mode == "line" then
+        for i = 1, 4 do col[i] = { ec[1], ec[2], ec[3], ea } end
+    else
+        local hi, lo = 1.9, 0.45
+        if mode == "inset" then hi, lo = 0.45, 1.9 end
+        local light = { Shade(c[1], hi) + 0.05, Shade(c[2], hi) + 0.05, Shade(c[3], hi) + 0.05, ea }
+        local dark = { Shade(c[1], lo), Shade(c[2], lo), Shade(c[3], lo), ea }
+        col[1], col[2], col[3], col[4] = light, dark, light, dark   -- top, bottom, left, right
+    end
+    e[1]:ClearAllPoints() e[1]:SetPoint("TOPLEFT", btn, "TOPLEFT") e[1]:SetPoint("TOPRIGHT", btn, "TOPRIGHT") e[1]:SetHeight(sz)
+    e[2]:ClearAllPoints() e[2]:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT") e[2]:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT") e[2]:SetHeight(sz)
+    e[3]:ClearAllPoints() e[3]:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, -sz) e[3]:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 0, sz) e[3]:SetWidth(sz)
+    e[4]:ClearAllPoints() e[4]:SetPoint("TOPRIGHT", btn, "TOPRIGHT", 0, -sz) e[4]:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 0, sz) e[4]:SetWidth(sz)
+    for i = 1, 4 do e[i]:SetVertexColor(col[i][1], col[i][2], col[i][3], col[i][4]) e[i]:Show() end
 end

@@ -165,8 +165,7 @@ local function UpdateButton(btn, text)
     StyleText(btn)
 
     local mode = B.db.borderMode
-    local sc = B.db.slotColor or B.DEFAULTS.slotColor
-    btn.baggieBg:SetVertexColor(sc[1], sc[2], sc[3], B.db.slotStyle == "none" and 0 or (tonumber(B.db.slotAlpha) or 1))
+    B.PaintSlot(btn, btn.baggieBg, tex and true or false)
     local show, br, bg, bb = false
     if tex and mode == "quality" and (quality or 0) >= (tonumber(B.db.borderMinQuality) or 2) then
         show = true br, bg, bb = QualityColor(quality)
@@ -316,7 +315,8 @@ local function MakeBagFrame(bag)
 end
 
 local TEMPLATE_GLOWS = { "NewItemTexture", "BattlepayItemTexture", "IconOverlay", "IconOverlay2", "IconBorder",
-    "UpgradeIcon", "JunkIcon", "ItemContextOverlay", "searchOverlay", "ExtendedSlot", "flash" }
+    "UpgradeIcon", "JunkIcon", "ItemContextOverlay", "searchOverlay", "ExtendedSlot", "flash",
+    "ItemSlotBackground", "SlotBackground", "NormalTexture", "Background", "bgTexture" }
 QuietTemplate = function(btn)
     -- the template's own stack count would sit under Baggie's, so keep it hidden
     local nm = btn.GetName and btn:GetName()
@@ -330,6 +330,9 @@ QuietTemplate = function(btn)
             if t.Hide then t:Hide() end
         end
     end
+    -- the wing-shaped empty slot art is the button's normal texture
+    local nt = btn.GetNormalTexture and btn:GetNormalTexture()
+    if nt and nt.SetAlpha then nt:SetAlpha(0) end
     for _, k in ipairs({ "flashAnim", "newitemglowAnim" }) do
         local a = btn[k]
         if type(a) == "table" and a.Stop then a:Stop() end
