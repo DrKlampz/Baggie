@@ -1,6 +1,8 @@
 # Changelog
 
 ## v0.4.0
+- The Options window is redesigned: a flatter, cleaner look, sections you can collapse, and three tabs. **Inventory** is your bags, **Bank** and **Guild Bank** each have their own tab. A "Sync all windows" switch at the top makes the bank and guild bank follow the Inventory look; turn it off and each window keeps its own colors, textures, opacity, borders, text and glows. Slot size, spacing, padding and slots per row are always set per window.
+- Sorting the bank no longer fights special bags: Baggie checks each bag's type more carefully, and if the game ever says an item doesn't fit a bag, the sort stops and puts the item back instead of repeating the error.
 - The bank and the guild bank now open as Baggie windows: same look, search, junk dimming, item level and glows as your bags, with your bank bags in one window, a bag-slot row and a Buy bag slot button; the guild bank has its tabs plus Deposit and Withdraw. Slots per row is adjustable. The bank and guild bank windows have Sort buttons (the bank sorts all bank bags, the guild bank sorts the current tab if you have the rights), more room between slots (adjustable), and each bank bag starts on its own row. The guild bank also shows the game's "no permission" message. If anything goes wrong, the game's own bank window is put back, and Options can turn each replacement off.
 - Window background: six new textures (leather, stone, linen, carbon fiber, brushed metal, a light-to-dark fade), a Custom texture choice that takes any file path or a SharedMedia background name, and an option to show textures in their own colors instead of tinted.
 - Opacity: the window opacity slider now goes down to fully clear, and the border and title bar have their own opacity sliders.

@@ -30,7 +30,7 @@ B.DEFAULTS = {
     bgNoTint = false,       -- show a texture in its own colors instead of tinting it with the background color
     edgeAlpha = 0.95,       -- opacity of the window border
     titleAlpha = 1,         -- opacity of the title bar
-    bankGap = 6,            -- space between slots in the bank windows
+    syncAll = true,         -- the bank and guild bank windows follow the Inventory look
     bankCols = 14,          -- slots per row in the Baggie bank and guild bank windows
     bankReplace = true,     -- use Baggie's bank window instead of the game's
     guildBankReplace = true,
@@ -91,6 +91,69 @@ local function Merge(dst, src)
         end
     end
     return dst
+end
+
+----------------------------------------------------------------------
+-- Per-window settings: the bank and the guild bank can have their own look (Options tabs).
+-- B.db.scopes.bank / .guild hold their own values. The look keys follow the Inventory unless
+-- "sync all" is off; the layout keys (slot size, spacing, padding, slots per row) are always their own.
+----------------------------------------------------------------------
+B.LOOK = {}
+for k in ("bgColor alpha edgeColor titleColor slotColor bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize showTitleBar " ..
+    "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
+    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuality glowMinQuality glowStrength junkDim ilvl " ..
+    "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
+B.LAYOUT = { cellSize = true, gap = true, padding = true, bankCols = true }
+
+local function DeepCopy(v)
+    if type(v) ~= "table" then return v end
+    local t = {}
+    for k, x in pairs(v) do t[k] = DeepCopy(x) end
+    return t
+end
+
+-- stage 1 (always): own layout values. stage 2 (when the look stops following the Inventory): a copy of the look
+function B.EnsureScope(name, withLook)
+    local db = B.db
+    db.scopes = db.scopes or {}
+    local sc = db.scopes[name]
+    if not sc then sc = {} db.scopes[name] = sc end
+    if not sc.layoutInit then
+        sc.cellSize = tonumber(db.cellSize) or 37
+        sc.gap = math.max(tonumber(db.gap) or 4, 6)
+        sc.padding = tonumber(db.padding) or 12
+        sc.bankCols = tonumber(db.bankCols) or 14
+        sc.layoutInit = true
+    end
+    if withLook and not sc.lookInit then
+        for k in pairs(B.LOOK) do
+            local v = db[k]
+            if v == nil then v = B.DEFAULTS[k] end
+            sc[k] = DeepCopy(v)
+        end
+        sc.lookInit = true
+    end
+    return sc
+end
+
+-- run fn with B.db reading the settings of one window ("bank" or "guild"); anything else runs as the Inventory
+function B.Scoped(scope, fn, ...)
+    local real = B.db
+    if not scope or not real then return fn(...) end
+    local sc = B.EnsureScope(scope, real.syncAll == false)
+    local sync = real.syncAll ~= false
+    B.db = setmetatable({}, {
+        __index = function(_, k)
+            local v = sc[k]
+            if v ~= nil and (B.LAYOUT[k] or (B.LOOK[k] and not sync)) then return v end
+            return real[k]
+        end,
+        __newindex = function(_, k, v) real[k] = v end,
+    })
+    local ok, a, b = pcall(fn, ...)
+    B.db = real
+    if not ok then error(a, 0) end
+    return a, b
 end
 
 function B.Print(msg) print("|cffe0b04aBaggie:|r " .. tostring(msg)) end
@@ -228,6 +291,24 @@ function B.Say(msg)   -- chat line plus a message in the middle of the screen
     if _G.UIErrorsFrame and _G.UIErrorsFrame.AddMessage then _G.UIErrorsFrame:AddMessage("Baggie: " .. tostring(msg), 1, 0.85, 0.2) end
 end
 
+-- true for ordinary bags (and the bank itself); false for quivers, herb bags, soul bags and other special bags
+function B.IsGeneralBag(bag)
+    if bag <= 0 then return true end
+    local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
+    if gf then
+        local ok, _, kind = pcall(gf, bag)
+        if ok and kind and kind ~= 0 then return false end
+    end
+    -- second opinion: the family of the bag item itself
+    local inv = B.BagInvID and B.BagInvID(bag)
+    local link = inv and _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", inv)
+    if link then
+        local fam = (_G.C_Item and _G.C_Item.GetItemFamily and _G.C_Item.GetItemFamily(link)) or (_G.GetItemFamily and _G.GetItemFamily(link))
+        if tonumber(fam) and fam ~= 0 then return false end
+    end
+    return true
+end
+
 -- sort entry for one item (see PlanSort)
 function B.SortEntry(link, id, count, quality)
     local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
@@ -254,12 +335,7 @@ function B.SortBags(opt)
     if not cells then
         cells, cur = {}, {}
         for _, bag in ipairs(opt.ids or B.BagIDs()) do
-            local general = true
-            local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
-            if gf and bag > 0 then
-                local _, kind = gf(bag)
-                if kind and kind ~= 0 then general = false end   -- quivers, soul bags etc. keep their own rules
-            end
+            local general = B.IsGeneralBag(bag)
             for sl = 1, B.NumSlots(bag) do
                 cells[#cells + 1] = { bag, sl }                    -- same numbering as the window's cells
                 local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
@@ -284,23 +360,40 @@ function B.SortBags(opt)
     if #moves == 0 then B.Say("already sorted (" .. #cells .. " slots checked)") return end
     B.Say("sorting: " .. #moves .. " moves")
     sorting = true
+    local aborted = false
+    local errF = _G.CreateFrame("Frame")
+    errF:RegisterEvent("UI_ERROR_MESSAGE")
+    errF:SetScript("OnEvent", function(_, _, a, b)
+        local msg = type(b) == "string" and b or a
+        if type(msg) ~= "string" then return end
+        local wrong = _G.ERR_WRONG_BAG_TYPE or "That item doesn't go in that container."
+        local wrong2 = _G.ERR_WRONG_BAG_TYPE2
+        if msg == wrong or (wrong2 and msg == wrong2) or msg:find("go in that container", 1, true) then aborted = true end
+    end)
+    local function finish() errF:UnregisterAllEvents() errF:SetScript("OnEvent", nil) end
     local n, waits = 0, 0
     local step
     local lockedFn = opt.locked or function(c) local _, _, l = B.SlotInfo(c[1], c[2]) return l end
     local pickupFn = opt.pickup or function(c) B.Pickup(c[1], c[2]) end
     local function stepRaw()
-        if _G.InCombatLockdown and _G.InCombatLockdown() then sorting = false return end
+        if _G.InCombatLockdown and _G.InCombatLockdown() then sorting = false finish() return end
+        if aborted then
+            sorting = false finish()
+            if _G.ClearCursor then _G.ClearCursor() end
+            B.Say("sort stopped: an item wouldn't fit one of the bags (a special bag?). Nothing was lost.")
+            return
+        end
         n = n + 1
         local m = moves[n]
         if not m then
-            sorting = false
+            sorting = false finish()
             if opt.refresh then opt.refresh() elseif B.Frame and B.Frame.Refresh then B.Frame.Refresh() end
             return
         end
         local a, b = cells[m[1]], cells[m[2]]
         if lockedFn(a) or lockedFn(b) or (_G.GetCursorInfo and _G.GetCursorInfo()) then
             waits = waits + 1
-            if waits > 40 then sorting = false B.Say("sort stopped (items stayed locked)") return end
+            if waits > 40 then sorting = false finish() B.Say("sort stopped (items stayed locked)") return end
             n = n - 1
             return _G.C_Timer.After(0.1, step)
         end
@@ -312,7 +405,7 @@ function B.SortBags(opt)
     end
     step = function()
         local ok, err = pcall(stepRaw)
-        if not ok then sorting = false B.Say("sort error: " .. tostring(err)) end
+        if not ok then sorting = false finish() B.Say("sort error: " .. tostring(err)) end
     end
     step()
 end
@@ -408,6 +501,7 @@ B.On("ADDON_LOADED", B.Safe("load", function(name)
     B.db = Merge(BaggieDB, B.DEFAULTS)
     if B.db.borders == false then B.db.borderMode = "none" end   -- older versions
     B.db.borders = nil
+    B.EnsureScope("bank") B.EnsureScope("guild")
     if not B.db.freeRein2 then   -- v0.3.0: plain bag order, nothing moves by itself; Sort only on click
         B.db.freeRein2 = true
         B.db.showSort = true

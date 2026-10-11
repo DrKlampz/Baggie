@@ -22,7 +22,7 @@ end
 
 local function BankGap()
     local _, gap = CellMetrics()
-    return math.max(gap, math.max(0, math.min(16, tonumber(B.db.bankGap) or 6)))
+    return gap
 end
 
 local function MoneyText(money)
@@ -142,7 +142,8 @@ local function BankButton(bag, slot)
     return btn
 end
 
-local function BankRefresh()
+local BankRefresh
+local function BankRefreshRaw()
     if not (bw and bw:IsShown() and B.db) then return end
     local cell, _, pad = CellMetrics()
     local gap = BankGap()
@@ -198,6 +199,7 @@ local function BankRefresh()
     end
     bw.buy:SetShown(not full)
 end
+BankRefresh = function() return B.Scoped("bank", BankRefreshRaw) end
 
 local function BankCreate()
     if bw then return end
@@ -398,7 +400,8 @@ local function StyleEdges(border, r, g, b, size)
     e[4]:SetPoint("TOPRIGHT") e[4]:SetPoint("BOTTOMRIGHT") e[4]:SetWidth(size)
 end
 
-local function GuildRefresh()
+local GuildRefresh
+local function GuildRefreshRaw()
     if not (gw and gw:IsShown() and B.db and _G.GetGuildBankItemInfo) then return end
     local cell, _, pad = CellMetrics()
     local gap = BankGap()
@@ -511,6 +514,7 @@ local function GuildRefresh()
     gw.free:SetShown(true)
     gw.money:SetText(MoneyText(_G.GetGuildBankMoney and _G.GetGuildBankMoney() or 0))
 end
+GuildRefresh = function() return B.Scoped("guild", GuildRefreshRaw) end
 
 local function GuildCreate()
     if gw then return end
@@ -640,6 +644,7 @@ end)
 
 function BU.ApplyLook()
     if not B.db then return end
-    if bw then F.StyleFrame(bw, "Bank") pcall(BankRefresh) end
-    if gw then F.StyleFrame(gw, "Guild Bank") pcall(GuildRefresh) end
+    B.styleVer = (B.styleVer or 0) + 1
+    if bw then pcall(B.Scoped, "bank", F.StyleFrame, bw, "Bank") pcall(BankRefresh) end
+    if gw then pcall(B.Scoped, "guild", F.StyleFrame, gw, "Guild Bank") pcall(GuildRefresh) end
 end
