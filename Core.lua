@@ -32,6 +32,7 @@ B.DEFAULTS = {
     titleAlpha = 1,         -- opacity of the title bar
     bankShowBags = true,    -- row of bank bag slots under the bank items
     bankSections = false,   -- each bank bag starts on its own row
+    bankCompact = true,
     syncAll = true,         -- the bank and guild bank windows follow the Inventory look
     bankCols = 14,          -- slots per row in the Baggie bank and guild bank windows
     bankReplace = true,     -- use Baggie's bank window instead of the game's

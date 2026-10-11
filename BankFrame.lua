@@ -152,11 +152,49 @@ local function BankRefreshRaw()
     local used, total = 0, 0
     local live = {}
     local col, row, secExtra = 0, 0, 0
+    local compact = B.db.bankCompact ~= false
+    local list, tail = {}, {}
+    local function place(btn, bag, slot)
+        live[btn] = true
+        btn:SetSize(cell, cell)
+        btn:ClearAllPoints()
+        btn:SetPoint("TOPLEFT", bw, "TOPLEFT", pad + col * (cell + gap), -(62 + row * (cell + gap) + secExtra))
+        btn:Show()
+        F.UpdateButton(btn, text)
+        col = col + 1
+        if col >= cols then col, row = 0, row + 1 end
+    end
+    if compact then
+        -- everything packs to the top: filled slots first, then the empty ones; reagent bags go last
+        local filled, empty, reagent = {}, {}, {}
+        for _, bag in ipairs(BankBagIDs()) do
+            local num = B.NumSlots(bag)
+            local isReagent = false
+            if bag > 0 and _G.C_Container and _G.C_Container.GetContainerNumFreeSlots then
+                local ok, _, fam = pcall(_G.C_Container.GetContainerNumFreeSlots, bag)
+                if ok and type(fam) == "number" and fam ~= 0 and bit and bit.band(fam, 0x20) ~= 0 then isReagent = true end
+            end
+            for slot = 1, num do
+                local _, _, _, _, link = B.SlotInfo(bag, slot)
+                total = total + 1
+                if link then used = used + 1 end
+                local e = { bag = bag, slot = slot }
+                if isReagent then reagent[#reagent + 1] = e
+                elseif link then filled[#filled + 1] = e else empty[#empty + 1] = e end
+            end
+        end
+        for _, e in ipairs(filled) do place(BankButton(e.bag, e.slot), e.bag, e.slot) end
+        for _, e in ipairs(empty) do place(BankButton(e.bag, e.slot), e.bag, e.slot) end
+        if #reagent > 0 then
+            if col ~= 0 then col, row = 0, row + 1 end
+            secExtra = secExtra + 8
+            for _, e in ipairs(reagent) do place(BankButton(e.bag, e.slot), e.bag, e.slot) end
+        end
+    else
     local first = true
     for _, bag in ipairs(BankBagIDs()) do
         local num = B.NumSlots(bag)
         if num > 0 then
-            -- every bag starts on its own row, with a little extra room above it
             if not first and B.db.bankSections ~= false then
                 if col ~= 0 then col, row = 0, row + 1 end
                 secExtra = secExtra + 8
@@ -164,19 +202,13 @@ local function BankRefreshRaw()
             first = false
             for slot = 1, num do
                 local btn = BankButton(bag, slot)
-                live[btn] = true
-                btn:SetSize(cell, cell)
-                btn:ClearAllPoints()
-                btn:SetPoint("TOPLEFT", bw, "TOPLEFT", pad + col * (cell + gap), -(62 + row * (cell + gap) + secExtra))
-                btn:Show()
-                F.UpdateButton(btn, text)
+                place(btn, bag, slot)
                 local _, _, _, _, link = B.SlotInfo(bag, slot)
                 total = total + 1
                 if link then used = used + 1 end
-                col = col + 1
-                if col >= cols then col, row = 0, row + 1 end
             end
         end
+    end
     end
     for _, btn in pairs(bankBtns) do if not live[btn] then btn:Hide() end end
     local rows = row + (col > 0 and 1 or 0)
