@@ -30,6 +30,7 @@ B.DEFAULTS = {
     bgNoTint = false,       -- show a texture in its own colors instead of tinting it with the background color
     edgeAlpha = 0.95,       -- opacity of the window border
     titleAlpha = 1,         -- opacity of the title bar
+    bankGap = 6,            -- space between slots in the bank windows
     bankCols = 14,          -- slots per row in the Baggie bank and guild bank windows
     bankReplace = true,     -- use Baggie's bank window instead of the game's
     guildBankReplace = true,
@@ -227,44 +228,57 @@ function B.Say(msg)   -- chat line plus a message in the middle of the screen
     if _G.UIErrorsFrame and _G.UIErrorsFrame.AddMessage then _G.UIErrorsFrame:AddMessage("Baggie: " .. tostring(msg), 1, 0.85, 0.2) end
 end
 
-function B.SortBags()
+-- sort entry for one item (see PlanSort)
+function B.SortEntry(link, id, count, quality)
+    local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
+    local okI, name, _, q, _, _, typ, sub = pcall(gi or function() end, link)
+    if not okI then name, q, typ, sub = nil end
+    if not name then name = tostring(link):match("%[(.-)%]") end
+    if not typ and _G.C_Item and _G.C_Item.GetItemInfoInstant then
+        local okJ, _, t2, s2 = pcall(_G.C_Item.GetItemInfoInstant, link)
+        if okJ then typ, sub = t2, s2 end
+    end
+    q = tonumber(q or quality) or 1
+    return { id = id, key = (tostring(link):match("item:[^|]+") or tostring(id)) .. "x" .. string.format("%05d", tonumber(count) or 1),
+        sk = string.format("%s|%s|%d|%s", tostring(typ or "~"), tostring(sub or ""), 9 - q, tostring(name or "")) }
+end
+
+-- opt (all optional): ids = bag ids to sort (default: your bags); noPins = ignore saved spots;
+-- cells/cur = ready-made cell list and entries (used for the guild bank); locked(cell), pickup(cell), delay, refresh
+function B.SortBags(opt)
+    opt = type(opt) == "table" and opt or {}
     if sorting then B.Say("already sorting") return end
     if _G.InCombatLockdown and _G.InCombatLockdown() then B.Say("can't sort in combat") return end
     if _G.GetCursorInfo and _G.GetCursorInfo() then B.Say("put down what you're holding first") return end
-    local cells, cur = {}, {}
-    for _, bag in ipairs(B.BagIDs()) do
-        local general = true
-        local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
-        if gf and bag > 0 then
-            local _, kind = gf(bag)
-            if kind and kind ~= 0 then general = false end   -- quivers, soul bags etc. keep their own rules
-        end
-        for sl = 1, B.NumSlots(bag) do
-            cells[#cells + 1] = { bag, sl }                    -- same numbering as the window's cells
-            local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
-            if not general then
-                cur[#cur + 1] = { skip = true }
-            elseif link then
-                local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
-                local okI, name, _, q, _, _, typ, sub = pcall(gi or function() end, link)
-                if not okI then name, q, typ, sub = nil end
-                if not name then name = tostring(link):match("%[(.-)%]") end
-                if not typ and _G.C_Item and _G.C_Item.GetItemInfoInstant then
-                    local okJ, _, t2, s2 = pcall(_G.C_Item.GetItemInfoInstant, link)
-                    if okJ then typ, sub = t2, s2 end
+    local cells, cur = opt.cells, opt.cur
+    if not cells then
+        cells, cur = {}, {}
+        for _, bag in ipairs(opt.ids or B.BagIDs()) do
+            local general = true
+            local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
+            if gf and bag > 0 then
+                local _, kind = gf(bag)
+                if kind and kind ~= 0 then general = false end   -- quivers, soul bags etc. keep their own rules
+            end
+            for sl = 1, B.NumSlots(bag) do
+                cells[#cells + 1] = { bag, sl }                    -- same numbering as the window's cells
+                local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
+                if not general then
+                    cur[#cur + 1] = { skip = true }
+                elseif link then
+                    cur[#cur + 1] = B.SortEntry(link, id, count, quality)
+                else
+                    cur[#cur + 1] = false
                 end
-                q = tonumber(q or quality) or 1
-                cur[#cur + 1] = { id = id, key = (tostring(link):match("item:[^|]+") or tostring(id)) .. "x" .. string.format("%05d", tonumber(count) or 1),
-                    sk = string.format("%s|%s|%d|%s", tostring(typ or "~"), tostring(sub or ""), 9 - q, tostring(name or "")) }
-            else
-                cur[#cur + 1] = false
             end
         end
     end
     -- items you saved to a spot stay in that spot; everything else is packed around them
     local fixed = {}
-    for id, p in pairs(B.Pins()) do
-        if type(p) == "table" and type(p.cell) == "number" then fixed[id] = math.floor(p.cell) end
+    if not opt.noPins then
+        for id, p in pairs(B.Pins()) do
+            if type(p) == "table" and type(p.cell) == "number" then fixed[id] = math.floor(p.cell) end
+        end
     end
     local moves = B.PlanSort(cur, fixed)
     if #moves == 0 then B.Say("already sorted (" .. #cells .. " slots checked)") return end
@@ -272,25 +286,29 @@ function B.SortBags()
     sorting = true
     local n, waits = 0, 0
     local step
+    local lockedFn = opt.locked or function(c) local _, _, l = B.SlotInfo(c[1], c[2]) return l end
+    local pickupFn = opt.pickup or function(c) B.Pickup(c[1], c[2]) end
     local function stepRaw()
         if _G.InCombatLockdown and _G.InCombatLockdown() then sorting = false return end
         n = n + 1
         local m = moves[n]
-        if not m then sorting = false if B.Frame and B.Frame.Refresh then B.Frame.Refresh() end return end
+        if not m then
+            sorting = false
+            if opt.refresh then opt.refresh() elseif B.Frame and B.Frame.Refresh then B.Frame.Refresh() end
+            return
+        end
         local a, b = cells[m[1]], cells[m[2]]
-        local _, _, la = B.SlotInfo(a[1], a[2])
-        local _, _, lb = B.SlotInfo(b[1], b[2])
-        if la or lb or (_G.GetCursorInfo and _G.GetCursorInfo()) then
+        if lockedFn(a) or lockedFn(b) or (_G.GetCursorInfo and _G.GetCursorInfo()) then
             waits = waits + 1
             if waits > 40 then sorting = false B.Say("sort stopped (items stayed locked)") return end
             n = n - 1
             return _G.C_Timer.After(0.1, step)
         end
         waits = 0
-        B.Pickup(a[1], a[2])
-        B.Pickup(b[1], b[2])
-        if _G.GetCursorInfo and _G.GetCursorInfo() then B.Pickup(a[1], a[2]) end
-        _G.C_Timer.After(0.12, step)
+        pickupFn(a)
+        pickupFn(b)
+        if _G.GetCursorInfo and _G.GetCursorInfo() then pickupFn(a) end
+        _G.C_Timer.After(opt.delay or 0.12, step)
     end
     step = function()
         local ok, err = pcall(stepRaw)

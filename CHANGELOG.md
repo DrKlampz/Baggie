@@ -1,7 +1,7 @@
 # Changelog
 
 ## v0.4.0
-- The bank and the guild bank now open as Baggie windows: same look, search, junk dimming, item level and glows as your bags, with your bank bags in one window, a bag-slot row and a Buy bag slot button; the guild bank has its tabs plus Deposit and Withdraw. Slots per row is adjustable. If anything goes wrong, the game's own bank window is put back, and Options can turn each replacement off.
+- The bank and the guild bank now open as Baggie windows: same look, search, junk dimming, item level and glows as your bags, with your bank bags in one window, a bag-slot row and a Buy bag slot button; the guild bank has its tabs plus Deposit and Withdraw. Slots per row is adjustable. The bank and guild bank windows have Sort buttons (the bank sorts all bank bags, the guild bank sorts the current tab if you have the rights), more room between slots (adjustable), and each bank bag starts on its own row. The guild bank also shows the game's "no permission" message. If anything goes wrong, the game's own bank window is put back, and Options can turn each replacement off.
 - Window background: six new textures (leather, stone, linen, carbon fiber, brushed metal, a light-to-dark fade), a Custom texture choice that takes any file path or a SharedMedia background name, and an option to show textures in their own colors instead of tinted.
 - Opacity: the window opacity slider now goes down to fully clear, and the border and title bar have their own opacity sliders.
 - Every color has a hex box (for example #E0B04A): copy it with Ctrl+C or paste one from another add-on with Ctrl+V and press Enter. It also reads three numbers such as 224 176 74.

@@ -20,6 +20,11 @@ local function CellMetrics()
     return cell, gap, pad
 end
 
+local function BankGap()
+    local _, gap = CellMetrics()
+    return math.max(gap, math.max(0, math.min(16, tonumber(B.db.bankGap) or 6)))
+end
+
 local function MoneyText(money)
     local gm = B.db.goldMode
     local g, s, c = math.floor(money / 10000), math.floor(money / 100) % 100, money % 100
@@ -99,6 +104,7 @@ end
 local bw, bankBags, bankBtns, bagSlotBtns = nil, {}, {}, {}
 local bankOpen = false
 local blizzBank
+local SoonBank
 
 local function BankBagIDs()
     local ids = { -1 }
@@ -138,30 +144,42 @@ end
 
 local function BankRefresh()
     if not (bw and bw:IsShown() and B.db) then return end
-    local cell, gap, pad = CellMetrics()
+    local cell, _, pad = CellMetrics()
+    local gap = BankGap()
     local cols = math.max(6, math.min(24, tonumber(B.db.bankCols) or 14))
     local text = (bw.search:GetText() or ""):lower()
-    local n, used, total = 0, 0, 0
+    local used, total = 0, 0
     local live = {}
+    local col, row, secExtra = 0, 0, 0
+    local first = true
     for _, bag in ipairs(BankBagIDs()) do
-        for slot = 1, B.NumSlots(bag) do
-            n = n + 1
-            local btn = BankButton(bag, slot)
-            live[btn] = true
-            local col, row = (n - 1) % cols, math.floor((n - 1) / cols)
-            btn:SetSize(cell, cell)
-            btn:ClearAllPoints()
-            btn:SetPoint("TOPLEFT", bw, "TOPLEFT", pad + col * (cell + gap), -(62 + row * (cell + gap)))
-            btn:Show()
-            F.UpdateButton(btn, text)
-            local _, _, _, _, link = B.SlotInfo(bag, slot)
-            total = total + 1
-            if link then used = used + 1 end
+        local num = B.NumSlots(bag)
+        if num > 0 then
+            -- every bag starts on its own row, with a little extra room above it
+            if not first then
+                if col ~= 0 then col, row = 0, row + 1 end
+                secExtra = secExtra + 8
+            end
+            first = false
+            for slot = 1, num do
+                local btn = BankButton(bag, slot)
+                live[btn] = true
+                btn:SetSize(cell, cell)
+                btn:ClearAllPoints()
+                btn:SetPoint("TOPLEFT", bw, "TOPLEFT", pad + col * (cell + gap), -(62 + row * (cell + gap) + secExtra))
+                btn:Show()
+                F.UpdateButton(btn, text)
+                local _, _, _, _, link = B.SlotInfo(bag, slot)
+                total = total + 1
+                if link then used = used + 1 end
+                col = col + 1
+                if col >= cols then col, row = 0, row + 1 end
+            end
         end
     end
     for _, btn in pairs(bankBtns) do if not live[btn] then btn:Hide() end end
-    local rows = math.max(1, math.ceil(n / cols))
-    bw:SetSize(pad * 2 + cols * cell + (cols - 1) * gap, 62 + rows * (cell + gap) + 44)
+    local rows = row + (col > 0 and 1 or 0)
+    bw:SetSize(pad * 2 + cols * cell + (cols - 1) * gap, 62 + rows * (cell + gap) + secExtra + 44)
     local cm = B.db.counterMode
     if cm == "free" then bw.free:SetText(("%d free of %d"):format(total - used, total))
     elseif cm == "freeonly" then bw.free:SetText(("%d free"):format(total - used))
@@ -231,6 +249,11 @@ local function BankCreate()
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         bagSlotBtns[i] = b
     end
+    bw.sort = Button(bw, "Sort", 46, function()
+        local ok, err = pcall(B.SortBags, { ids = BankBagIDs(), noPins = true, refresh = SoonBank })
+        if not ok then B.Say("sort error: " .. tostring(err)) end
+    end)
+    bw.sort:SetPoint("TOPLEFT", bw, "TOPLEFT", 12, -33)
     bw.buy = Button(bw, "Buy bag slot", 90, function()
         if _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
     end)
@@ -258,7 +281,7 @@ for _, e in ipairs({ "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CH
 end
 
 local pendingBank
-local function SoonBank()
+SoonBank = function()
     if pendingBank then return end
     pendingBank = true
     C_Timer.After(0.1, function() pendingBank = nil if bw and bw:IsShown() then pcall(BankRefresh) end end)
@@ -377,7 +400,8 @@ end
 
 local function GuildRefresh()
     if not (gw and gw:IsShown() and B.db and _G.GetGuildBankItemInfo) then return end
-    local cell, gap, pad = CellMetrics()
+    local cell, _, pad = CellMetrics()
+    local gap = BankGap()
     local cols = math.max(7, math.min(24, tonumber(B.db.bankCols) or 14))
     local tab = GuildTab()
     local text = (gw.search:GetText() or ""):lower()
@@ -468,6 +492,20 @@ local function GuildRefresh()
             t:Hide()
         end
     end
+    -- no tab you may view: say so, like the game's window does
+    local viewable = 0
+    for i = 1, n do
+        local _, _, v = _G.GetGuildBankTabInfo(i)
+        if v then viewable = viewable + 1 end
+    end
+    if not gw.noPerm then
+        gw.noPerm = gw:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        gw.noPerm:SetPoint("CENTER", gw, "CENTER", 0, 0)
+        gw.noPerm:SetText("You do not have permission to view any Guild Bank tabs.")
+    end
+    local blocked = (n > 0 and viewable == 0)
+    gw.noPerm:SetShown(blocked)
+    if blocked then for _, b in pairs(gBtns) do b:Hide() end end
     local tname = _G.GetGuildBankTabInfo and select(1, _G.GetGuildBankTabInfo(tab))
     gw.free:SetText(tname or "")
     gw.free:SetShown(true)
@@ -488,8 +526,36 @@ local function GuildCreate()
     gw.money:SetPoint("BOTTOMRIGHT", -12, 10)
     gw.withdraw = Button(gw, "Withdraw", 70, function() if _G.StaticPopup_Show then _G.StaticPopup_Show("GUILDBANK_WITHDRAW") end end)
     gw.deposit = Button(gw, "Deposit", 70, function() if _G.StaticPopup_Show then _G.StaticPopup_Show("GUILDBANK_DEPOSIT") end end)
+    gw.sort = Button(gw, "Sort", 46, function() B.GuildSort() end)
+    gw.sort:SetPoint("TOPLEFT", gw, "TOPLEFT", 12, -33)
     gw.deposit:SetPoint("BOTTOMRIGHT", gw, "BOTTOMRIGHT", -12, 30)
     gw.withdraw:SetPoint("RIGHT", gw.deposit, "LEFT", -4, 0)
+end
+
+-- Sort the current guild bank tab. Needs the right to take items out and put them in; each move waits for the server.
+function B.GuildSort()
+    local tab = GuildTab()
+    local cells, cur = {}, {}
+    for i = 1, SLOTS do
+        cells[i] = { tab, i }
+        local ok, tex, count, _, _, quality = pcall(_G.GetGuildBankItemInfo, tab, i)
+        local link = ok and tex and _G.GetGuildBankItemLink and _G.GetGuildBankItemLink(tab, i)
+        if link then
+            local id = tonumber(tostring(link):match("item:(%d+)"))
+            cur[i] = B.SortEntry(link, id, count, quality)
+        else
+            cur[i] = false
+        end
+    end
+    B.SortBags({
+        cells = cells, cur = cur, noPins = true, delay = 0.6,
+        locked = function(c)
+            local ok, _, _, l = pcall(_G.GetGuildBankItemInfo, c[1], c[2])
+            return ok and l
+        end,
+        pickup = function(c) _G.PickupGuildBankItem(c[1], c[2]) end,
+        refresh = function() if gw and gw:IsShown() then GuildRefresh() end end,
+    })
 end
 
 local gev = CreateFrame("Frame")
@@ -505,32 +571,68 @@ local function SoonGuild()
     C_Timer.After(0.1, function() pendingG = nil if gw and gw:IsShown() then pcall(GuildRefresh) end end)
 end
 
+local hooked
 local function HideBlizzardGuildBank()
     local f = _G.GuildBankFrame
-    if f and not InCombatLockdown() then pcall(f.SetParent, f, Hider()) end
+    if not f then return end
+    if not hooked then
+        hooked = true
+        -- the game shows its window after the event too, so keep it out of sight while Baggie's is up
+        pcall(f.HookScript, f, "OnShow", function(self)
+            if gOpen and not InCombatLockdown() then pcall(self.SetParent, self, Hider()) end
+        end)
+    end
+    if not InCombatLockdown() then pcall(f.SetParent, f, Hider()) end
 end
+
+local function OpenGuild()
+    if gOpen and gw and gw:IsShown() then HideBlizzardGuildBank() return end
+    local ok, err = pcall(function()
+        GuildCreate()
+        F.ApplyLook()
+        gOpen = true
+        HideBlizzardGuildBank()
+        gw:Show()
+        GuildRefresh()
+    end)
+    if not ok then
+        B.Print("guild bank window error, using the game's guild bank instead: " .. tostring(err))
+        B.db.guildBankReplace = false
+        gOpen = false
+        local f = _G.GuildBankFrame
+        if f then pcall(f.SetParent, f, UIParent) end
+    end
+end
+
+-- the guild bank window belongs to a load-on-demand add-on that may not exist when the event fires,
+-- so hide it again once it is there and also open Baggie's from its own OnShow
+local gl = CreateFrame("Frame")
+gl:RegisterEvent("ADDON_LOADED")
+gl:SetScript("OnEvent", function(_, _, name)
+    if name == "Blizzard_GuildBankUI" and _G.GuildBankFrame and B.db then
+        _G.GuildBankFrame:HookScript("OnShow", function()
+            if B.db.guildBankReplace ~= false and not gOpen then OpenGuild() end
+        end)
+        hooked = true
+        _G.GuildBankFrame:HookScript("OnShow", function(self)
+            if gOpen and not InCombatLockdown() then pcall(self.SetParent, self, Hider()) end
+        end)
+    end
+end)
 
 gev:SetScript("OnEvent", function(_, event)
     if not B.db then return end
     if event == "GUILDBANKFRAME_OPENED" then
         if B.db.guildBankReplace == false then return end
-        local ok, err = pcall(function()
-            GuildCreate()
-            F.ApplyLook()
-            gOpen = true
-            HideBlizzardGuildBank()
-            gw:Show()
-        end)
-        if not ok then
-            B.Print("guild bank window error, using the game's guild bank instead: " .. tostring(err))
-            B.db.guildBankReplace = false
-            gOpen = false
-            local f = _G.GuildBankFrame
-            if f then pcall(f.SetParent, f, UIParent) end
-        end
+        OpenGuild()
+        -- the game's window can appear a moment later: put it away again
+        C_Timer.After(0.05, function() if gOpen then HideBlizzardGuildBank() end end)
+        C_Timer.After(0.4, function() if gOpen then HideBlizzardGuildBank() end end)
     elseif event == "GUILDBANKFRAME_CLOSED" then
         gOpen = false
         if gw and gw:IsShown() then gw:Hide() end
+        local f = _G.GuildBankFrame
+        if f and not InCombatLockdown() then pcall(f.SetParent, f, UIParent) end
     else
         if gw and gw:IsShown() then SoonGuild() end
     end

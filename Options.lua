@@ -45,6 +45,7 @@ local ROWS = {
     { h = "Bank and guild bank" },
     { key = "bankReplace", kind = "check", label = "Use Baggie's bank window (reopen the bank to apply)" },
     { key = "guildBankReplace", kind = "check", label = "Use Baggie's guild bank window (reopen to apply)" },
+    { key = "bankGap", kind = "slider", label = "Space between slots in the bank windows", min = 0, max = 16, step = 1 },
     { key = "bankCols", kind = "slider", label = "Slots per row in the bank windows", min = 7, max = 24, step = 1 },
 
     { h = "Colors" },
