@@ -1,13 +1,13 @@
 local ADDON, B = ...
 -- Optional link to GreedUI: when it is installed and "Follow GreedUI" is on, Baggie takes its colors from it.
-local function Sh(c, f) return { math.min(1, c[1] * f), math.min(1, c[2] * f), math.min(1, c[3] * f) } end
+local function Sh(c, f) local k = f > 1 and (f - 1) * 0.03 or 0 return { math.min(1, c[1] * f + k), math.min(1, c[2] * f + k), math.min(1, c[3] * f + k) } end
 local function Sync(theme)
     if not (B.db and B.db.followGreedUI ~= false and theme) then return end
     local d = B.db
     if theme.bg then
         d.bgColor = { theme.bg[1], theme.bg[2], theme.bg[3] }
         d.bgStyle, d.bgNoTint = "solid", false
-        d.slotStyle, d.slotColor = "filled", Sh(theme.bg, 2.2)
+        d.slotStyle, d.slotColor, d.slotColor2 = "filled", Sh(theme.bg, 2.2), Sh(theme.bg, 3)
         d.slotQualityTint = false
     end
     d.alpha = math.max(0.9, tonumber(theme.bgAlpha) or 0.95)
