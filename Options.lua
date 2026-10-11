@@ -243,32 +243,135 @@ local function FromText(str)
     end
 end
 
--- the game's color picker, new and old style
+-- the game's color picker (new and old style), with an opacity slider for the colors that have one and a
+-- share box for copying a color to, or pasting one from, other add-ons
+local ALPHA_KEY = { bgColor = "alpha", edgeColor = "edgeAlpha", titleColor = "titleAlpha", slotColor = "slotAlpha" }
+local share
+
+local function Hex2(v) return ("%02X"):format(math.floor(math.max(0, math.min(1, tonumber(v) or 0)) * 255 + 0.5)) end
+
 local function PickColor(t, key, done)
-    local cur = t[key] or B.DEFAULTS[key]
-    local r, g, b = cur[1], cur[2], cur[3]
     local P = _G.ColorPickerFrame
     if not P then return end
+    local alphaKey = ALPHA_KEY[key]
+    local cur = t[key] or B.DEFAULTS[key]
+    local r, g, b = cur[1], cur[2], cur[3]
+    local a0 = alphaKey and (tonumber(t[alphaKey]) or tonumber(B.DEFAULTS[alphaKey]) or 1) or nil
+    local inverted = false      -- some versions of the picker count opacity the other way round
+
+    local function ReadAlpha()
+        if not alphaKey then return nil end
+        local v
+        if P.GetColorAlpha then v = P:GetColorAlpha()
+        elseif _G.OpacitySliderFrame then v = _G.OpacitySliderFrame:GetValue() end
+        v = tonumber(v)
+        if not v then return nil end
+        if inverted or (not P.GetColorAlpha) then v = 1 - v end
+        return math.max(0, math.min(1, v))
+    end
+
+    local ShareSync
     local function Changed()
         local nr, ng, nb = P:GetColorRGB()
         t[key] = { nr, ng, nb }
+        local al = ReadAlpha()
+        if al then t[alphaKey] = al end
         done()
+        if ShareSync then ShareSync() end
     end
     local function Cancel()
         t[key] = { r, g, b }
+        if alphaKey then t[alphaKey] = a0 end
         done()
     end
+
     if P.SetupColorPickerAndShow then
-        P:SetupColorPickerAndShow({ r = r, g = g, b = b, hasOpacity = false, swatchFunc = Changed, cancelFunc = Cancel })
+        P:SetupColorPickerAndShow({ r = r, g = g, b = b, opacity = a0, hasOpacity = alphaKey ~= nil,
+            swatchFunc = Changed, opacityFunc = Changed, cancelFunc = Cancel })
+        if alphaKey and P.GetColorAlpha then
+            -- find out which way round this picker counts: it should hand back what we gave it
+            local got = tonumber(P:GetColorAlpha())
+            if got and math.abs(got - a0) > 0.02 and math.abs(got - (1 - a0)) <= 0.02 then inverted = true end
+        end
     else
-        P.hasOpacity = false
-        P.opacityFunc = nil
+        P.hasOpacity = alphaKey ~= nil
+        P.opacity = alphaKey and (1 - a0) or 0
+        P.opacityFunc = Changed
         P.func = Changed
         P.cancelFunc = Cancel
-        P.previousValues = { r = r, g = g, b = b }
+        P.previousValues = { r = r, g = g, b = b, opacity = P.opacity }
         P:SetColorRGB(r, g, b)
+        if alphaKey and _G.OpacitySliderFrame then _G.OpacitySliderFrame:SetValue(1 - a0) end
         P:Hide() P:Show()
     end
+
+    -- share box under the picker
+    if not share then
+        share = Box(P, 10, 66, PANEL, GOLD)
+        share:SetPoint("TOPLEFT", P, "BOTTOMLEFT", 0, -4)
+        share:SetPoint("TOPRIGHT", P, "BOTTOMRIGHT", 0, -4)
+        share.label = Text(share, 11, GOLD)
+        share.label:SetPoint("TOPLEFT", 10, -8)
+        share.label:SetText("Share code")
+        share.hint = Text(share, 10, DIM)
+        share.hint:SetPoint("TOPRIGHT", -10, -9)
+        share.hint:SetText("Ctrl+C to copy, Ctrl+V to paste")
+        share.eb = CreateFrame("EditBox", nil, share, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        share.eb:SetHeight(22)
+        share.eb:SetPoint("TOPLEFT", 10, -26)
+        share.eb:SetPoint("TOPRIGHT", -150, -26)
+        share.eb:SetAutoFocus(false)
+        share.eb:SetFont(FONT, 11, "")
+        share.eb:SetTextInsets(6, 6, 0, 0)
+        share.eb:SetMaxLetters(32)
+        share.eb:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+        share.eb:SetBackdropColor(FIELD[1], FIELD[2], FIELD[3], 1)
+        share.eb:SetBackdropBorderColor(LINE[1], LINE[2], LINE[3], 1)
+        share.copy = FlatButton(share, "Copy", 60, 22, function() share.eb:SetFocus() share.eb:HighlightText() end)
+        share.copy:SetPoint("LEFT", share.eb, "RIGHT", 6, 0)
+        share.apply = FlatButton(share, "Apply", 76, 22)
+        share.apply:SetPoint("LEFT", share.copy, "RIGHT", 6, 0)
+        share.msg = Text(share, 10, DIM)
+        share.msg:SetPoint("BOTTOMLEFT", 10, 6)
+        share.eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+        share.eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    end
+    local function ApplyText()
+        local txt = share.eb:GetText() or ""
+        local col, alpha
+        local h6, h2 = txt:match("^%s*#?(%x%x%x%x%x%x)(%x%x)%s*$")   -- RRGGBBAA, as this box writes it
+        if h6 then
+            col = FromText(h6)
+            alpha = tonumber(h2, 16) / 255
+        else
+            col = FromText(txt)
+        end
+        if not col then share.msg:SetText("Couldn't read that. Use a code like #E0B04A or #E0B04AFF, or three numbers.") return end
+        P:SetColorRGB(col[1], col[2], col[3])
+        t[key] = { col[1], col[2], col[3] }
+        if alphaKey and alpha then
+            t[alphaKey] = alpha
+            local v = inverted and (1 - alpha) or alpha
+            if P.SetColorAlpha then P:SetColorAlpha(v)
+            elseif _G.OpacitySliderFrame then _G.OpacitySliderFrame:SetValue(1 - alpha) end
+        end
+        done()
+        share.msg:SetText("Applied.")
+        ShareSync()
+        share.eb:ClearFocus()
+    end
+    share.apply:SetScript("OnClick", ApplyText)
+    share.eb:SetScript("OnEnterPressed", ApplyText)
+    ShareSync = function()
+        if share.eb:HasFocus() then return end
+        local c = t[key] or { r, g, b }
+        local txt = "#" .. Hex2(c[1]) .. Hex2(c[2]) .. Hex2(c[3])
+        if alphaKey then txt = txt .. Hex2(tonumber(t[alphaKey]) or a0) end
+        share.eb:SetText(txt)
+        share.msg:SetText(alphaKey and "The last two digits are the opacity." or "")
+    end
+    share:Show()
+    ShareSync()
 end
 
 ----------------------------------------------------------------------
