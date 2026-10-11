@@ -31,7 +31,7 @@ B.DEFAULTS = {
     edgeAlpha = 0.95,       -- opacity of the window border
     titleAlpha = 1,         -- opacity of the title bar
     bankShowBags = true,    -- row of bank bag slots under the bank items
-    bankSections = true,    -- each bank bag starts on its own row
+    bankSections = false,   -- each bank bag starts on its own row
     syncAll = true,         -- the bank and guild bank windows follow the Inventory look
     bankCols = 14,          -- slots per row in the Baggie bank and guild bank windows
     bankReplace = true,     -- use Baggie's bank window instead of the game's
@@ -530,6 +530,7 @@ B.On("ADDON_LOADED", B.Safe("load", function(name)
     if B.db.borders == false then B.db.borderMode = "none" end   -- older versions
     B.db.borders = nil
     B.EnsureScope("bank") B.EnsureScope("guild")
+    if not B.db.bankFlow1 then B.db.bankFlow1 = true B.db.bankSections = false end   -- bank slots now run in one continuous grid
     if not B.db.freeRein2 then   -- v0.3.0: plain bag order, nothing moves by itself; Sort only on click
         B.db.freeRein2 = true
         B.db.showSort = true
