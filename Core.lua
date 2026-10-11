@@ -30,6 +30,7 @@ B.DEFAULTS = {
     bgNoTint = false,       -- show a texture in its own colors instead of tinting it with the background color
     edgeAlpha = 0.95,       -- opacity of the window border
     titleAlpha = 1,         -- opacity of the title bar
+    bankShowBags = true,    -- row of bank bag slots under the bank items
     bankSections = true,    -- each bank bag starts on its own row
     syncAll = true,         -- the bank and guild bank windows follow the Inventory look
     bankCols = 14,          -- slots per row in the Baggie bank and guild bank windows

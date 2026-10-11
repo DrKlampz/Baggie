@@ -180,7 +180,7 @@ local function BankRefreshRaw()
     end
     for _, btn in pairs(bankBtns) do if not live[btn] then btn:Hide() end end
     local rows = row + (col > 0 and 1 or 0)
-    bw:SetSize(pad * 2 + cols * cell + (cols - 1) * gap, 62 + rows * (cell + gap) + secExtra + 44)
+    bw:SetSize(pad * 2 + cols * cell + (cols - 1) * gap, 62 + rows * (cell + gap) + secExtra + (B.db.bankShowBags ~= false and 44 or 30))
     local cm = B.db.counterMode
     if cm == "free" then bw.free:SetText(("%d free of %d"):format(total - used, total))
     elseif cm == "freeonly" then bw.free:SetText(("%d free"):format(total - used))
@@ -195,9 +195,10 @@ local function BankRefreshRaw()
         local tex = inv and _G.GetInventoryItemTexture and _G.GetInventoryItemTexture("player", inv)
         b.inv = inv
         if tex then b.icon:SetTexture(tex) b.icon:Show() else b.icon:Hide() end
+        b:SetShown(B.db.bankShowBags ~= false)
         b:SetAlpha(i <= (tonumber(numBought) or 0) and 1 or 0.35)
     end
-    bw.buy:SetShown(not full)
+    bw.buy:SetShown(not full and B.db.bankShowBags ~= false)
 end
 BankRefresh = function() return B.Scoped("bank", BankRefreshRaw) end
 
