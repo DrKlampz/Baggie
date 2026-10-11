@@ -11,6 +11,12 @@ local function Sync(theme)
         d.slotQualityTint = false
     end
     d.alpha = math.max(0.9, tonumber(theme.bgAlpha) or 0.95)
+    -- the master background: a GreedUI texture, a game texture, or plain color
+    if theme.bgPath then
+        d.bgStyle, d.bgCustom, d.bgNoTint = "custom", theme.bgPath, theme.bgNoTint ~= false
+    elseif theme.bgStyle and theme.bgStyle ~= "solid" then
+        d.bgStyle, d.bgNoTint = theme.bgStyle, theme.bgNoTint ~= false
+    end
     if theme.accent then
         local a = theme.accent
         d.edgeColor = { a[1], a[2], a[3] }
@@ -23,7 +29,7 @@ local function Sync(theme)
     if B.BankUI and B.BankUI.ApplyLook then B.BankUI.ApplyLook() end
     if B.RefreshBankGlows then B.RefreshBankGlows() end
 end
-B.SyncGreedUI = function() local G = _G.GreedUI if G and G.GetTheme then Sync(G.GetTheme()) end end
+B.SyncGreedUI = function() local G = _G.GreedUI if G and G.GetTheme then Sync(G.GetTheme("Baggie")) end end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
@@ -34,5 +40,7 @@ f:SetScript("OnEvent", function()
         open = function() if B.Options and B.Options.Toggle then B.Options.Toggle() end end,
         refresh = B.SyncGreedUI,
     }) end
-    if G.OnTheme then G.OnTheme(Sync) end
+    if G.OnTheme then G.OnTheme(function() Sync(G.GetTheme("Baggie")) end) end
+    -- Baggie's own settings may not be loaded yet at this moment: take the look again a moment later
+    for _, delay in ipairs({ 1, 3 }) do C_Timer.After(delay, function() if B.SyncGreedUI then B.SyncGreedUI() end end) end
 end)

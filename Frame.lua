@@ -774,7 +774,7 @@ function F.StyleFrame(w, title)
     w:SetBackdropBorderColor(edge[1], edge[2], edge[3], tonumber(B.db.edgeAlpha) or 0.95)
     do   -- GreedUI's black stone and gold inlay, when Baggie follows it
         local GU = _G.GreedUI
-        local th = GU and GU.GetTheme and B.db.followGreedUI ~= false and GU.GetTheme()
+        local th = GU and GU.GetTheme and B.db.followGreedUI ~= false and GU.GetTheme("Baggie")
         if th and GU.Inlay and (th.stone or th.inlay) then
             GU.Inlay(w, { inset = inset + 3, studs = th.inlay and true or false, stoneAlpha = th.stone and 0.45 or 0, lineAlpha = th.inlay and 0.5 or 0 })
         elseif GU and GU.InlayOff and w.greedInlay then GU.InlayOff(w) end
