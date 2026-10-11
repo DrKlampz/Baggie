@@ -421,6 +421,12 @@ local function GetButton(bag, slot)
     btn.bag, btn.slot = bag, slot
     Decorate(btn)
     Wrap(btn)
+    -- bank open + right-click: herbs and the like go to the matching special bank bag first
+    btn:HookScript("PreClick", function(self, mouse)
+        if mouse == "RightButton" and not (_G.IsModifierKeyDown and _G.IsModifierKeyDown()) and self.bag and B.SmartBankStore then
+            pcall(B.SmartBankStore, self.bag, self.slot)
+        end
+    end)
     buttons[key] = btn
     return btn
 end

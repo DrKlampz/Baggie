@@ -643,6 +643,8 @@ gev:SetScript("OnEvent", function(_, event)
     end
 end)
 
+function BU.IsOpen() return bankOpen end
+
 function BU.ApplyLook()
     if not B.db then return end
     B.styleVer = (B.styleVer or 0) + 1

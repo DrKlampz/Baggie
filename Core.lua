@@ -293,27 +293,111 @@ function B.Say(msg)   -- chat line plus a message in the middle of the screen
     if _G.UIErrorsFrame and _G.UIErrorsFrame.AddMessage then _G.UIErrorsFrame:AddMessage("Baggie: " .. tostring(msg), 1, 0.85, 0.2) end
 end
 
--- true for ordinary bags (and the bank itself); false for quivers, herb bags, soul bags and other special bags
-function B.IsGeneralBag(bag)
-    if bag <= 0 then return true end
+-- what a bag can hold. Family numbers are the game's: 4 soul shards, 8 leather, 32 herbs, 64 enchanting,
+-- 128 engineering, 512 gems, 1024 mining, 1 arrows, 2 bullets.
+local FAMILY_BY_SUB = { [1] = 4, [2] = 32, [3] = 64, [4] = 128, [5] = 512, [6] = 1024, [7] = 8, [8] = 16 }
+local SPECIAL_NAMES = { "herb", "mining", "enchant", "engineer", "gem", "jewel", "soul", "quiver", "ammo", "leatherworking" }
+B.badBags = {}   -- bags that refused an item during a sort (learned, until you log out)
+
+local function BagLink(bag)
+    local inv
+    local nb = tonumber(_G.NUM_BAG_SLOTS) or 4
+    if bag > nb and _G.BankButtonIDToInvSlotID then inv = _G.BankButtonIDToInvSlotID(bag - nb, 1) end
+    inv = inv or (B.BagInvID and B.BagInvID(bag))
+    return inv and _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", inv)
+end
+
+function B.ItemFamily(link)
+    if not link then return 0 end
+    local f = (_G.C_Item and _G.C_Item.GetItemFamily and _G.C_Item.GetItemFamily(link)) or (_G.GetItemFamily and _G.GetItemFamily(link))
+    return tonumber(f) or 0
+end
+
+-- 0 for an ordinary bag, otherwise the kind of item it is limited to
+function B.BagFamily(bag)
+    if bag <= 0 then return 0 end
     local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
     if gf then
         local ok, _, kind = pcall(gf, bag)
-        if ok and kind and kind ~= 0 then return false end
+        if ok and tonumber(kind) and kind ~= 0 then return kind end
     end
-    -- second opinion: what kind of bag item sits in that slot (ordinary bags are container class, subclass 0)
-    local inv
-    if _G.BankButtonIDToInvSlotID and bag > (tonumber(_G.NUM_BAG_SLOTS) or 4) then inv = _G.BankButtonIDToInvSlotID(bag - (tonumber(_G.NUM_BAG_SLOTS) or 4), 1) end
-    inv = inv or (B.BagInvID and B.BagInvID(bag))
-    local link = inv and _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", inv)
+    local link = BagLink(bag)
     if link and _G.C_Item and _G.C_Item.GetItemInfoInstant then
         local ok, _, _, _, _, _, classID, subID = pcall(_G.C_Item.GetItemInfoInstant, link)
-        if ok and classID then
-            if classID ~= 1 then return false end        -- quiver, ammo pouch
-            if (tonumber(subID) or 0) ~= 0 then return false end   -- herb, enchanting, engineering, mining, soul ...
+        if ok and classID == 1 then return FAMILY_BY_SUB[tonumber(subID) or 0] or 0 end
+        if ok and classID == 11 then return (subID == 3) and 2 or 1 end
+    end
+    return 0
+end
+
+-- true for ordinary bags (and the bank itself); false for quivers, herb bags, soul bags and other special bags
+function B.IsGeneralBag(bag)
+    if bag <= 0 then return true end
+    local link = BagLink(bag)
+    if B.badBags[link and tostring(link) or ("bag" .. bag)] then return false end
+    if B.BagFamily(bag) ~= 0 then return false end
+    if link then
+        if _G.C_Item and _G.C_Item.GetItemInfoInstant then
+            local ok, _, _, _, _, _, classID, subID = pcall(_G.C_Item.GetItemInfoInstant, link)
+            if ok and classID then
+                if classID ~= 1 then return false end
+                if (tonumber(subID) or 0) ~= 0 then return false end
+            end
+        end
+        local name = (_G.C_Item and _G.C_Item.GetItemInfo and _G.C_Item.GetItemInfo(link)) or (_G.GetItemInfo and _G.GetItemInfo(link))
+        if type(name) == "string" then
+            name = name:lower()
+            for _, w in ipairs(SPECIAL_NAMES) do if name:find(w, 1, true) then return false end end
         end
     end
     return true
+end
+
+function B.RememberBadBag(bag)
+    local link = BagLink(bag)
+    B.badBags[link and tostring(link) or ("bag" .. bag)] = true
+end
+
+-- Right-click an item in your bags while the bank is open: if it belongs in one of your special bank bags
+-- (herbs in an herb bag and so on) it goes there first, merging with a stack that is already there.
+-- Returns true when it moved the item.
+function B.SmartBankStore(bag, slot)
+    local ui = B.BankUI
+    if not (ui and ui.IsOpen and ui.IsOpen()) then return false end
+    if _G.CursorHasItem and _G.CursorHasItem() then return false end
+    local _, count, locked, _, link, id = B.SlotInfo(bag, slot)
+    if not link or locked then return false end
+    local fam = B.ItemFamily(link)
+    if fam == 0 or not _G.bit then return false end
+    local first = (tonumber(_G.NUM_BAG_SLOTS) or 4) + 1
+    local last = (tonumber(_G.NUM_BAG_SLOTS) or 4) + (tonumber(_G.NUM_BANKBAGSLOTS) or 7)
+    local maxStack = 1
+    local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
+    if gi then
+        local _, _, _, _, _, _, _, ms = gi(link)
+        maxStack = tonumber(ms) or 1
+    end
+    for b = first, last do
+        local bf = B.BagFamily(b)
+        if bf ~= 0 and _G.bit.band(fam, bf) ~= 0 then
+            local num = B.NumSlots(b)
+            local freeSlot
+            for sl = 1, num do
+                local _, c2, _, _, l2, id2 = B.SlotInfo(b, sl)
+                if not l2 then
+                    freeSlot = freeSlot or sl
+                elseif id2 == id and (tonumber(c2) or 1) + (tonumber(count) or 1) <= maxStack then
+                    B.Pickup(bag, slot) B.Pickup(b, sl)
+                    return true
+                end
+            end
+            if freeSlot then
+                B.Pickup(bag, slot) B.Pickup(b, freeSlot)
+                return true
+            end
+        end
+    end
+    return false
 end
 
 -- sort entry for one item (see PlanSort)
