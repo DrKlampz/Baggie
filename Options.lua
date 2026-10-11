@@ -101,6 +101,8 @@ local SECTIONS = {
           names = { leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon", brushed = "Brushed metal", marble = "Marble", rock = "Rock", parchment = "Parchment" } },
         { key = "slotAlpha", kind = "slider", label = "Slot background opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "slotEmptyAlpha", kind = "slider", label = "Empty slots: share of that opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "slotQualityTint", kind = "check", label = "Tint each slot with its item's quality color" },
+        { key = "slotQualityStrength", kind = "slider", label = "Quality tint strength", min = 0.05, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "slotEdge", kind = "cycle", label = "Slot edge", values = { "none", "line", "bevel", "inset" },
           names = { none = "None", line = "Thin line", bevel = "Raised bevel", inset = "Sunken inset" } },
         { key = "slotEdgeColor", kind = "color", label = "Slot edge color (thin line)" },

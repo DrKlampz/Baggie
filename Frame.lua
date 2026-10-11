@@ -165,7 +165,7 @@ local function UpdateButton(btn, text)
     StyleText(btn)
 
     local mode = B.db.borderMode
-    B.PaintSlot(btn, btn.baggieBg, tex and true or false)
+    B.PaintSlot(btn, btn.baggieBg, tex and true or false, quality)
     local show, br, bg, bb = false
     if tex and mode == "quality" and (quality or 0) >= (tonumber(B.db.borderMinQuality) or 2) then
         show = true br, bg, bb = QualityColor(quality)
@@ -330,9 +330,30 @@ QuietTemplate = function(btn)
             if t.Hide then t:Hide() end
         end
     end
-    -- the wing-shaped empty slot art is the button's normal texture
+    -- the wing-shaped empty slot art: the button's normal texture or a background texture the game adds later.
+    -- everything on the button that is not Baggie's own is put away, and kept away if the game shows it again
     local nt = btn.GetNormalTexture and btn:GetNormalTexture()
-    if nt and nt.SetAlpha then nt:SetAlpha(0) end
+    local function away(r)
+        if r.SetAlpha then r:SetAlpha(0) end
+        if r.Hide then r:Hide() end
+        if not r.baggieAway and r.HookScript == nil and hooksecurefunc then
+            r.baggieAway = true
+            pcall(hooksecurefunc, r, "Show", function(self) self:Hide() end)
+            pcall(hooksecurefunc, r, "SetAlpha", function(self, a) if a and a > 0 then self:SetAlpha(0) end end)
+        end
+    end
+    if nt then away(nt) end
+    if not btn.baggieHookedNT and hooksecurefunc then
+        btn.baggieHookedNT = true
+        pcall(hooksecurefunc, btn, "SetNormalTexture", function(self) local t = self:GetNormalTexture() if t then away(t) end end)
+        pcall(hooksecurefunc, btn, "SetNormalAtlas", function(self) local t = self:GetNormalTexture() if t then away(t) end end)
+    end
+    for _, r in ipairs({ btn:GetRegions() }) do
+        if r.GetObjectType and r:GetObjectType() == "Texture" and r ~= btn.baggieBg and r ~= btn.baggieIcon and r ~= btn.glow
+            and r ~= btn.pinMark and r ~= btn.pickGlow and not (btn.slotEdge and (r == btn.slotEdge[1] or r == btn.slotEdge[2] or r == btn.slotEdge[3] or r == btn.slotEdge[4])) then
+            away(r)
+        end
+    end
     for _, k in ipairs({ "flashAnim", "newitemglowAnim" }) do
         local a = btn[k]
         if type(a) == "table" and a.Stop then a:Stop() end

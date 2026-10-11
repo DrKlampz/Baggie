@@ -49,6 +49,8 @@ B.DEFAULTS = {
     slotColor2 = { 0.22, 0.22, 0.28 }, -- second color of the gradient style
     slotTexture = "leather",           -- tile used by the texture style
     slotEmptyAlpha = 1,                -- empty slots are drawn at this share of the opacity
+    slotQualityTint = false,           -- tint a filled slot with the item's quality color
+    slotQualityStrength = 0.35,
     slotEdge = "none",                 -- none | line | bevel | inset
     slotEdgeColor = { 0.88, 0.69, 0.29 },
     slotEdgeAlpha = 0.6,
@@ -109,7 +111,7 @@ end
 -- "sync all" is off; the layout keys (slot size, spacing, padding, slots per row) are always their own.
 ----------------------------------------------------------------------
 B.LOOK = {}
-for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize showTitleBar " ..
+for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
     "borderMode borderColor borderSize borderMinQuality glowQuest glowQuality glowMinQuality glowStrength junkDim ilvl " ..
     "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
@@ -784,12 +786,17 @@ local WHITE = "Interface\\Buttons\\WHITE8X8"
 
 local function Shade(c, f) return math.max(0, math.min(1, c * f)) end
 
-function B.PaintSlot(btn, bgTex, filled)
+function B.PaintSlot(btn, bgTex, filled, quality)
     local db = B.db
     if not (bgTex and db) then return end
     local style = db.slotStyle or "filled"
     local c = db.slotColor or B.DEFAULTS.slotColor
     local a = tonumber(db.slotAlpha) or 1
+    local c2tint
+    if db.slotQualityTint and filled and (tonumber(quality) or 0) >= 1 and _G.ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality] then
+        local q, k = ITEM_QUALITY_COLORS[quality], math.max(0, math.min(1, tonumber(db.slotQualityStrength) or 0.35))
+        c = { c[1] + (q.r - c[1]) * k, c[2] + (q.g - c[2]) * k, c[3] + (q.b - c[3]) * k }
+    end
     if not filled then a = a * (tonumber(db.slotEmptyAlpha) or 1) end
     if style == "none" then
         bgTex:SetTexture(WHITE) bgTex:SetVertexColor(c[1], c[2], c[3], 0)

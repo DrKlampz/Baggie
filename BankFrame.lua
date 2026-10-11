@@ -454,7 +454,7 @@ local function GuildRefreshRaw()
         btn.count:SetFont(font, tonumber(B.db.countSize) or 11, "OUTLINE")
         local ok, tex, count, locked, _, quality = pcall(_G.GetGuildBankItemInfo, tab, i)
         local link = ok and tex and _G.GetGuildBankItemLink and _G.GetGuildBankItemLink(tab, i)
-        B.PaintSlot(btn, btn.bg, (ok and tex) and true or false)
+        B.PaintSlot(btn, btn.bg, (ok and tex) and true or false, quality)
         if ok and tex then
             btn.icon:SetTexture(tex)
             btn.icon:Show()
