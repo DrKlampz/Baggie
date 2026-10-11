@@ -338,83 +338,104 @@ function B.SortBags(opt)
     if sorting then B.Say("already sorting") return end
     if _G.InCombatLockdown and _G.InCombatLockdown() then B.Say("can't sort in combat") return end
     if _G.GetCursorInfo and _G.GetCursorInfo() then B.Say("put down what you're holding first") return end
-    local cells, cur = opt.cells, opt.cur
-    if not cells then
-        cells, cur = {}, {}
-        for _, bag in ipairs(opt.ids or B.BagIDs()) do
-            local general = B.IsGeneralBag(bag)
-            for sl = 1, B.NumSlots(bag) do
-                cells[#cells + 1] = { bag, sl }                    -- same numbering as the window's cells
-                local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
-                if not general then
-                    cur[#cur + 1] = { skip = true }
-                elseif link then
-                    cur[#cur + 1] = B.SortEntry(link, id, count, quality)
-                else
-                    cur[#cur + 1] = false
+    local blocked = {}
+    local Run
+    Run = function(attempt)
+        local cells, cur = opt.cells, opt.cur
+        if not cells then
+            cells, cur = {}, {}
+            for _, bag in ipairs(opt.ids or B.BagIDs()) do
+                local general = (not blocked[bag]) and B.IsGeneralBag(bag)
+                for sl = 1, B.NumSlots(bag) do
+                    cells[#cells + 1] = { bag, sl }                    -- same numbering as the window's cells
+                    local _, count, _, quality, link, id = B.SlotInfo(bag, sl)
+                    if not general then
+                        cur[#cur + 1] = { skip = true }
+                    elseif link then
+                        cur[#cur + 1] = B.SortEntry(link, id, count, quality)
+                    else
+                        cur[#cur + 1] = false
+                    end
                 end
             end
         end
-    end
-    -- items you saved to a spot stay in that spot; everything else is packed around them
-    local fixed = {}
-    if not opt.noPins then
-        for id, p in pairs(B.Pins()) do
-            if type(p) == "table" and type(p.cell) == "number" then fixed[id] = math.floor(p.cell) end
+        -- items you saved to a spot stay in that spot; everything else is packed around them
+        local fixed = {}
+        if not opt.noPins then
+            for id, p in pairs(B.Pins()) do
+                if type(p) == "table" and type(p.cell) == "number" then fixed[id] = math.floor(p.cell) end
+            end
         end
-    end
-    local moves = B.PlanSort(cur, fixed)
-    if #moves == 0 then B.Say("already sorted (" .. #cells .. " slots checked)") return end
-    B.Say("sorting: " .. #moves .. " moves")
-    sorting = true
-    local aborted = false
-    local errF = _G.CreateFrame("Frame")
-    errF:RegisterEvent("UI_ERROR_MESSAGE")
-    errF:SetScript("OnEvent", function(_, _, a, b)
-        local msg = type(b) == "string" and b or a
-        if type(msg) ~= "string" then return end
-        local wrong = _G.ERR_WRONG_BAG_TYPE or "That item doesn't go in that container."
-        local wrong2 = _G.ERR_WRONG_BAG_TYPE2
-        if msg == wrong or (wrong2 and msg == wrong2) or msg:find("go in that container", 1, true) then aborted = true end
-    end)
-    local function finish() errF:UnregisterAllEvents() errF:SetScript("OnEvent", nil) end
-    local n, waits = 0, 0
-    local step
-    local lockedFn = opt.locked or function(c) local _, _, l = B.SlotInfo(c[1], c[2]) return l end
-    local pickupFn = opt.pickup or function(c) B.Pickup(c[1], c[2]) end
-    local function stepRaw()
-        if _G.InCombatLockdown and _G.InCombatLockdown() then sorting = false finish() return end
-        if aborted then
-            sorting = false finish()
-            if _G.ClearCursor then _G.ClearCursor() end
-            B.Say("sort stopped: an item wouldn't fit one of the bags (a special bag?). Nothing was lost.")
+        local moves = B.PlanSort(cur, fixed)
+        if #moves == 0 then
+            if attempt == 1 then B.Say("already sorted (" .. #cells .. " slots checked)") end
             return
         end
-        n = n + 1
-        local m = moves[n]
-        if not m then
-            sorting = false finish()
-            if opt.refresh then opt.refresh() elseif B.Frame and B.Frame.Refresh then B.Frame.Refresh() end
-            return
+        if attempt == 1 then B.Say("sorting: " .. #moves .. " moves") end
+        sorting = true
+        local aborted, lastMove = false, nil
+        local errF = _G.CreateFrame("Frame")
+        errF:RegisterEvent("UI_ERROR_MESSAGE")
+        errF:SetScript("OnEvent", function(_, _, a, b)
+            local msg = type(b) == "string" and b or a
+            if type(msg) ~= "string" then return end
+            local wrong = _G.ERR_WRONG_BAG_TYPE or "That item doesn't go in that container."
+            local wrong2 = _G.ERR_WRONG_BAG_TYPE2
+            if msg == wrong or (wrong2 and msg == wrong2) or msg:find("go in that container", 1, true) then aborted = true end
+        end)
+        local function finish() errF:UnregisterAllEvents() errF:SetScript("OnEvent", nil) end
+        local n, waits = 0, 0
+        local step
+        local lockedFn = opt.locked or function(c) local _, _, l = B.SlotInfo(c[1], c[2]) return l end
+        local pickupFn = opt.pickup or function(c) B.Pickup(c[1], c[2]) end
+        local function stepRaw()
+            if _G.InCombatLockdown and _G.InCombatLockdown() then sorting = false finish() return end
+            if aborted then
+                sorting = false finish()
+                if _G.ClearCursor then _G.ClearCursor() end
+                -- the game refused a move: some bag only takes certain items. Leave that bag alone and plan again.
+                local last = lastMove
+                if last and not opt.cells and attempt < 8 then
+                    local ba, bb = last[1][1], last[2][1]
+                    local tex = B.SlotInfo(bb, last[2][2])
+                    if ba ~= bb then
+                        blocked[bb] = true
+                        if tex then blocked[ba] = true end
+                    else
+                        blocked[bb] = true
+                    end
+                    return _G.C_Timer.After(0.3, function() Run(attempt + 1) end)
+                end
+                return
+            end
+            n = n + 1
+            local m = moves[n]
+            if not m then
+                sorting = false finish()
+                if opt.refresh then opt.refresh() elseif B.Frame and B.Frame.Refresh then B.Frame.Refresh() end
+                return
+            end
+            local a, b = cells[m[1]], cells[m[2]]
+            if lockedFn(a) or lockedFn(b) or (_G.GetCursorInfo and _G.GetCursorInfo()) then
+                waits = waits + 1
+                if waits > 40 then sorting = false finish() B.Say("sort stopped (items stayed locked)") return end
+                n = n - 1
+                return _G.C_Timer.After(0.1, step)
+            end
+            waits = 0
+            lastMove = { a, b }
+            pickupFn(a)
+            pickupFn(b)
+            if _G.GetCursorInfo and _G.GetCursorInfo() then pickupFn(a) end
+            _G.C_Timer.After(opt.delay or 0.12, step)
         end
-        local a, b = cells[m[1]], cells[m[2]]
-        if lockedFn(a) or lockedFn(b) or (_G.GetCursorInfo and _G.GetCursorInfo()) then
-            waits = waits + 1
-            if waits > 40 then sorting = false finish() B.Say("sort stopped (items stayed locked)") return end
-            n = n - 1
-            return _G.C_Timer.After(0.1, step)
+        step = function()
+            local ok, err = pcall(stepRaw)
+            if not ok then sorting = false finish() B.Say("sort error: " .. tostring(err)) end
         end
-        waits = 0
-        pickupFn(a)
-        pickupFn(b)
-        if _G.GetCursorInfo and _G.GetCursorInfo() then pickupFn(a) end
-        _G.C_Timer.After(opt.delay or 0.12, step)
+        step()
     end
-    step = function()
-        local ok, err = pcall(stepRaw)
-        if not ok then sorting = false finish() B.Say("sort error: " .. tostring(err)) end
-    end
-    step()
+    Run(1)
 end
 
 -- inventory slot number of an equipped bag (the game moved this function into C_Container)
