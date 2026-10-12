@@ -77,6 +77,7 @@ local SECTIONS = {
         { key = "slotColor", kind = "color", label = "Slot background" },
     } },
     { id = "bg", title = "Background and opacity", scope = "all", rows = {
+        { key = "bgColor", kind = "color", label = "Background color (a solid fill, or the tint of a texture)" },
         { key = "bgStyle", kind = "cycle", label = "Background", values = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient", "custom" }, names = BGNAMES },
         { key = "bgCustom", kind = "text", label = "Custom texture: a file path or a SharedMedia background name",
           hint = "for example  Interface\\AddOns\\SomeAddon\\texture" },
