@@ -94,7 +94,8 @@ local function StyleText(btn)
     btn.baggieIlvl:ClearAllPoints()
     btn.baggieIlvl:SetPoint(B.db.ilvlPos or "TOPRIGHT", ip[1], ip[2])
     if B.db.iconCrop then btn.baggieIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92) else btn.baggieIcon:SetTexCoord(0, 1, 0, 1) end
-    local pc = B.db.pinColor or B.DEFAULTS.pinColor
+    local look = B.GetLookSettings and B.GetLookSettings() or B.db
+    local pc = look.pinColor or B.DEFAULTS.pinColor
     local ps = tonumber(B.db.pinSize) or 7
     btn.pinMark:SetVertexColor(pc[1], pc[2], pc[3], 1)
     btn.pinMark:SetSize(ps, ps)
@@ -533,7 +534,8 @@ local function PlaceSections(startY, inset)
                 h.line:SetTexture("Interface\\Buttons\\WHITE8X8")
                 sectionHeaders[sec.key] = h
             end
-            local e = B.db.edgeColor or B.DEFAULTS.edgeColor
+            local look = B.GetLookSettings and B.GetLookSettings() or B.db
+            local e = look.edgeColor or B.DEFAULTS.edgeColor
             h.text:SetTextColor(e[1], e[2], e[3])
             h.text:SetText(sec.title)
             h.text:ClearAllPoints() h.text:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y)
@@ -732,8 +734,8 @@ local BG_STYLES = {
 }
 
 -- "custom": a texture path typed by the player, or the name of a background registered with SharedMedia
-local function CustomTexture()
-    local v = B.db.bgCustom
+local function CustomTexture(db)
+    local v = db.bgCustom
     if type(v) ~= "string" then return end
     v = v:gsub("^%s+", ""):gsub("%s+$", "")
     if v == "" then return end
@@ -747,18 +749,19 @@ end
 
 -- Background, border, title bar and title of any Baggie window (bags, bank, guild bank)
 function F.StyleFrame(w, title)
-    local bg, edge, tc = B.db.bgColor or B.DEFAULTS.bgColor, B.db.edgeColor or B.DEFAULTS.edgeColor, B.db.titleColor or B.DEFAULTS.titleColor
-    local bs = BG_STYLES[B.db.bgStyle] or BG_STYLES.solid
-    if B.db.bgStyle == "custom" then
-        local path = CustomTexture()
+    local db = B.GetLookSettings and B.GetLookSettings() or B.db
+    local bg, edge, tc = db.bgColor or B.DEFAULTS.bgColor, db.edgeColor or B.DEFAULTS.edgeColor, db.titleColor or B.DEFAULTS.titleColor
+    local bs = BG_STYLES[db.bgStyle] or BG_STYLES.solid
+    if db.bgStyle == "custom" then
+        local path = CustomTexture(db)
         bs = path and { path, true, 256 } or BG_STYLES.solid
     end
-    local es = math.max(1, math.min(6, tonumber(B.db.edgeSize) or 1))
+    local es = math.max(1, math.min(6, tonumber(db.edgeSize) or 1))
     local backdrop = { bgFile = bs[1], tile = bs[2], tileSize = bs[3] }
     local inset = 0
-    if B.db.edgeStyle == "tooltip" then
+    if db.edgeStyle == "tooltip" then
         backdrop.edgeFile, backdrop.edgeSize, inset = "Interface\\Tooltips\\UI-Tooltip-Border", 16, 4
-    elseif B.db.edgeStyle == "none" then
+    elseif db.edgeStyle == "none" then
         inset = 0
     else
         backdrop.edgeFile, backdrop.edgeSize, inset = "Interface\\Buttons\\WHITE8X8", es, es
@@ -766,12 +769,12 @@ function F.StyleFrame(w, title)
     backdrop.insets = { left = inset, right = inset, top = inset, bottom = inset }
     w:SetBackdrop(backdrop)
     local textured = bs ~= BG_STYLES.solid
-    if textured and B.db.bgNoTint then
-        w:SetBackdropColor(1, 1, 1, tonumber(B.db.alpha) or 0.96)
+    if textured and db.bgNoTint then
+        w:SetBackdropColor(1, 1, 1, tonumber(db.alpha) or 0.96)
     else
-        w:SetBackdropColor(bg[1], bg[2], bg[3], tonumber(B.db.alpha) or 0.96)
+        w:SetBackdropColor(bg[1], bg[2], bg[3], tonumber(db.alpha) or 0.96)
     end
-    w:SetBackdropBorderColor(edge[1], edge[2], edge[3], tonumber(B.db.edgeAlpha) or 0.95)
+    w:SetBackdropBorderColor(edge[1], edge[2], edge[3], tonumber(db.edgeAlpha) or 0.95)
     do   -- GreedUI's black stone and gold inlay, when Baggie follows it
         local GU = _G.GreedUI
         local th = GU and GU.GetTheme and B.db.followGreedUI ~= false and GU.GetTheme("Baggie")
@@ -782,11 +785,11 @@ function F.StyleFrame(w, title)
     w.bar:ClearAllPoints()
     local bi = math.max(1, inset)
     w.bar:SetPoint("TOPLEFT", bi, -bi) w.bar:SetPoint("TOPRIGHT", -bi, -bi)
-    w.bar:SetVertexColor(tc[1], tc[2], tc[3], tonumber(B.db.titleAlpha) or 1)
-    w.bar:SetShown(B.db.showTitleBar ~= false)
+    w.bar:SetVertexColor(tc[1], tc[2], tc[3], tonumber(db.titleAlpha) or 1)
+    w.bar:SetShown(db.showTitleBar ~= false)
     w.title:SetTextColor(edge[1], edge[2], edge[3])
-    w.title:SetFont(B.FontPath(B.db.titleFont), tonumber(B.db.titleSize) or 15, "")
-    w.title:SetText(B.db.titleMode == "none" and "" or title)
+    w.title:SetFont(B.FontPath(db.titleFont), tonumber(db.titleSize) or 15, "")
+    w.title:SetText(db.titleMode == "none" and "" or title)
 end
 
 function F.ApplyLook()
@@ -1120,16 +1123,22 @@ function F.ApplyOverrides()
     if not B.db.enabled then RestoreBlizzardBags() return end
     if not hooked then
         hooked = true
+        -- One key press runs several of the game's bag functions (ToggleAllBags calls OpenAllBags or CloseAllBags
+        -- inside it). All of them decide from the window's state at the start of the frame, so they agree
+        -- instead of one opening the window and the next closing it again.
+        local stateTime, stateWas = -1, false
+        local function WasShown()
+            local now = GetTime()
+            if now ~= stateTime then stateTime = now stateWas = (win and win:IsShown()) and true or false end
+            return stateWas
+        end
         local function onToggle()
             if not B.db.enabled then return end
-            local now = GetTime()
-            if now == lastToggle then return end   -- one key press can reach two of the game's toggles
-            lastToggle = now
-            F.Toggle()
+            if WasShown() then F.Close() else F.Open() end
             HideBlizzardBags()
         end
-        local function onOpen() if B.db.enabled then F.Open() HideBlizzardBags() end end
-        local function onClose() if B.db.enabled then F.Close() end end
+        local function onOpen() if B.db.enabled then WasShown() F.Open() HideBlizzardBags() end end
+        local function onClose() if B.db.enabled then WasShown() F.Close() end end
         Hook("ToggleBackpack", onToggle)
         Hook("ToggleBag", onToggle)
         Hook("ToggleAllBags", onToggle)

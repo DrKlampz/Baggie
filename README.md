@@ -18,6 +18,7 @@ Spots are virtual. Baggie never moves anything in your real bags, so it is insta
 - Quality borders, dimmed grey junk, cooldowns, free slot counter, money.
 - Sort button (manual only, uses the game's own bag sort). Bags never rearrange on their own.
 - Options window (`/baggie options`): themes and color pickers for the window, title bar, slots and borders; border style and thickness; slot size, spacing and padding; gold and slot-counter display; item level; vendor helpers and more. Backgrounds, borders, fonts, glows and text positions are all adjustable. Right-click the minimap button for the options. The bank and guild bank open as Baggie windows too. Window backgrounds include textures and a custom texture path, every color can be copied and pasted as a hex code, and opacity is adjustable for the window, border and title bar.
+- When **Follow GreedUI** is enabled, its look is applied only while Baggie draws its windows. Your Baggie settings and profiles are not rewritten; turn sync off to immediately restore Baggie's saved appearance.
 - Replaces the default bag windows and the bag keys (B, F12 etc.). `/baggie default` gives the default bags back.
 
 ## Commands

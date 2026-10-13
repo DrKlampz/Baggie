@@ -788,7 +788,7 @@ local WHITE = "Interface\\Buttons\\WHITE8X8"
 local function Shade(c, f) return math.max(0, math.min(1, c * f)) end
 
 function B.PaintSlot(btn, bgTex, filled, quality)
-    local db = B.db
+    local db = B.GetLookSettings and B.GetLookSettings() or B.db
     if not (bgTex and db) then return end
     local style = db.slotStyle or "filled"
     local c = db.slotColor or B.DEFAULTS.slotColor

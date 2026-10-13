@@ -441,7 +441,6 @@ local function GuildRefreshRaw()
     local cols = math.max(7, math.min(24, tonumber(B.db.bankCols) or 14))
     local tab = GuildTab()
     local text = (gw.search:GetText() or ""):lower()
-    local sc = B.db.slotColor or B.DEFAULTS.slotColor
     local bc = B.db.borderColor or B.DEFAULTS.borderColor
     local font = B.FontPath(B.db.font)
     for i = 1, SLOTS do
@@ -521,7 +520,8 @@ local function GuildRefreshRaw()
             t.icon:SetTexture(icon)
             t.icon:SetDesaturated(not viewable)
             local sel = (i == tab)
-            local e = B.db.edgeColor or B.DEFAULTS.edgeColor
+            local look = B.GetLookSettings and B.GetLookSettings() or B.db
+            local e = look.edgeColor or B.DEFAULTS.edgeColor
             t.bg:SetVertexColor(sel and e[1] or 0.13, sel and e[2] or 0.13, sel and e[3] or 0.16, 1)
             t:Show()
         elseif t then
