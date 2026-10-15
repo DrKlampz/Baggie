@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.1
+- Bank: your own Reagent Bag no longer shows up in the bank window.
+- Bank: bank tabs you haven't unlocked yet are no longer drawn as if they were open slots.
+
 ## v0.4.0
 - The Options window is redesigned: a flatter, cleaner look, sections you can collapse, and three tabs. **Inventory** is your bags, **Bank** and **Guild Bank** each have their own tab. A "Sync all windows" switch at the top makes the bank and guild bank follow the Inventory look; turn it off and each window keeps its own colors, textures, opacity, borders, text and glows. Slot size, spacing, padding and slots per row are always set per window.
 - Sorting the bank no longer fights special bags: Baggie checks each bag's type more carefully, and if the game ever says an item doesn't fit a bag, the sort stops and puts the item back instead of repeating the error.
