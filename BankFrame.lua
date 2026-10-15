@@ -106,11 +106,36 @@ local bankOpen = false
 local blizzBank
 local SoonBank
 
+-- The newer bank is a row of tabs (bag ids CharacterBankTab_1..6) that report their full size even while
+-- they are still locked, so a tab only counts once it has been bought.
+local function TabUnlocked(bag)
+    local E = _G.Enum
+    local CB = _G.C_Bank
+    if not (E and E.BagIndex and E.BankType and CB and CB.FetchPurchasedBankTabIDs) then return true end
+    local isTab = false
+    for i = 1, 6 do
+        if E.BagIndex["CharacterBankTab_" .. i] == bag then isTab = true break end
+    end
+    if not isTab then return true end
+    local ok, ids = pcall(CB.FetchPurchasedBankTabIDs, E.BankType.Character)
+    if not ok or type(ids) ~= "table" or #ids == 0 then
+        -- nothing cached yet: ask the game for it and refresh when it answers
+        if CB.FetchPurchasedBankTabData then pcall(CB.FetchPurchasedBankTabData, E.BankType.Character) end
+        return true
+    end
+    for _, id in ipairs(ids) do
+        if id == bag then return true end
+    end
+    return false
+end
+
 local function BankBagIDs()
     local ids = { -1 }
     local first = (tonumber(_G.NUM_BAG_SLOTS) or 4) + 1
     local last = (tonumber(_G.NUM_BAG_SLOTS) or 4) + (tonumber(_G.NUM_BANKBAGSLOTS) or 7)
-    for b = first, last do ids[#ids + 1] = b end
+    for b = first, last do
+        if TabUnlocked(b) then ids[#ids + 1] = b end
+    end
     return ids
 end
 
@@ -311,7 +336,8 @@ end
 -- sorting and the repeated refreshes are all driven by events
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED", "PLAYERBANKBAGSLOTS_CHANGED",
-    "BAG_UPDATE", "BAG_UPDATE_DELAYED", "ITEM_LOCK_CHANGED", "PLAYER_MONEY", "INVENTORY_CHANGED" }) do
+    "BAG_UPDATE", "BAG_UPDATE_DELAYED", "ITEM_LOCK_CHANGED", "PLAYER_MONEY", "INVENTORY_CHANGED",
+    "BANK_TAB_SETTINGS_UPDATED", "BANK_TABS_CHANGED" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 
