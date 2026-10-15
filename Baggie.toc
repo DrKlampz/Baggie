@@ -10,6 +10,7 @@
 ## X-Wago-ID: RNL4eENo
 
 Core.lua
+Roster.lua
 Layout.lua
 Frame.lua
 Glow.lua

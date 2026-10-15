@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Characters window (shift-click the minimap button): delete a character's saved spots, and deleted characters are spotted and removed automatically.
+
 ## v0.5.1
 - Bank: your own Reagent Bag no longer shows up in the bank window.
 - Bank: bank tabs you haven't unlocked yet are no longer drawn as if they were open slots.
