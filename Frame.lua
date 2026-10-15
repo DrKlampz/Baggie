@@ -1022,9 +1022,13 @@ local function Create()
         win.bagBtns[#win.bagBtns + 1] = b
     end
 
-    win.free = Label(win, 11, 0.8, 0.8, 0.8)
+    -- the bottom line lives on its own layer above every slot, section and bar, so nothing can cover it
+    win.footerLayer = CreateFrame("Frame", nil, win)
+    win.footerLayer:SetAllPoints(win)
+    win.footerLayer:SetFrameLevel(win:GetFrameLevel() + 80)
+    win.free = Label(win.footerLayer, 11, 0.8, 0.8, 0.8)
     win.free:SetPoint("BOTTOMLEFT", PAD, 10)
-    win.money = Label(win, 11, 1, 0.85, 0.4)
+    win.money = Label(win.footerLayer, 11, 1, 0.85, 0.4)
     win.money:SetPoint("BOTTOMRIGHT", -PAD, 10)
 
     win:SetScript("OnShow", function() F.Refresh() end)
