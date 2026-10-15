@@ -149,7 +149,8 @@ end
 local function UpdateGlow(btn, tex, quality, id, count)
     local r, g, b
     if tex and B.db.glowQuest then
-        local kind = QuestKind(btn, id)
+        local okK, kind = pcall(QuestKind, btn, id)
+        if not okK then kind = nil end
         if kind == "quest" then r, g, b = 1, 0.82, 0.1
         elseif kind == "starts" then r, g, b = 1, 0.95, 0.4 end
     end
@@ -166,10 +167,27 @@ local function UpdateGlow(btn, tex, quality, id, count)
     if r then
         btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
         btn.glow:SetVertexColor(r, g, b, math.max(0.1, math.min(1, tonumber(B.db.glowStrength) or 0.8)))
+        btn.glow:SetAlpha(1)
         btn.glow:Show()
+        B.glowBtns = B.glowBtns or setmetatable({}, { __mode = "k" })
+        B.glowBtns[btn] = true
     else
         btn.glow:Hide()
+        if B.glowBtns then B.glowBtns[btn] = nil end
     end
+end
+-- optional gentle pulse on every lit glow
+do
+    local pf = CreateFrame("Frame")
+    local t = 0
+    pf:SetScript("OnUpdate", function(_, dt)
+        if not (B.db and B.db.pulse and B.glowBtns) then return end
+        t = t + dt
+        local k = 0.62 + 0.38 * math.sin(t * 2.6)
+        for btn in pairs(B.glowBtns) do
+            if btn.glow and btn.glow:IsShown() then btn.glow:SetAlpha(k) end
+        end
+    end)
 end
 function B.ArmGlows() glowArmed = true end
 
@@ -826,6 +844,75 @@ function F.StyleFrame(w, title)
     w.title:SetTextColor(edge[1], edge[2], edge[3])
     w.title:SetFont(B.FontPath(db.titleFont), tonumber(db.titleSize) or 15, "")
     w.title:SetText(db.titleMode == "none" and "" or title)
+    if F.StyleFlair then pcall(F.StyleFlair, w, edge, inset) end
+end
+
+-- optional extra trim: "gilded" is an inner gold line with corner studs, "royal" adds a second line,
+-- diamond corners and a rule under the title
+function F.StyleFlair(w, edge, inset)
+    local mode = B.db.flair or "none"
+    local fx = w.flairFx
+    if not fx then
+        fx = { line = {}, line2 = {}, stud = {}, rule = w:CreateTexture(nil, "OVERLAY", nil, 2) }
+        for i = 1, 4 do
+            fx.line[i] = w:CreateTexture(nil, "OVERLAY", nil, 2)
+            fx.line2[i] = w:CreateTexture(nil, "OVERLAY", nil, 2)
+            fx.stud[i] = w:CreateTexture(nil, "OVERLAY", nil, 3)
+            for _, t in ipairs({ fx.line[i], fx.line2[i], fx.stud[i] }) do t:SetTexture("Interface\\Buttons\\WHITE8X8") end
+        end
+        fx.rule:SetTexture("Interface\\Buttons\\WHITE8X8")
+        w.flairFx = fx
+    end
+    if mode == "none" then
+        for i = 1, 4 do fx.line[i]:Hide() fx.line2[i]:Hide() fx.stud[i]:Hide() end
+        fx.rule:Hide()
+        return
+    end
+    local r, g, b = edge[1], edge[2], edge[3]
+    local function Frame4(set, off, a)
+        local o = (inset or 1) + off
+        local P = { { "TOPLEFT", o, -o, "TOPRIGHT", -o, -o, true }, { "BOTTOMLEFT", o, o, "BOTTOMRIGHT", -o, o, true },
+                    { "TOPLEFT", o, -o, "BOTTOMLEFT", o, o, false }, { "TOPRIGHT", -o, -o, "BOTTOMRIGHT", -o, o, false } }
+        for i, p in ipairs(P) do
+            local t = set[i]
+            t:ClearAllPoints()
+            t:SetPoint(p[1], w, p[1], p[2], p[3]) t:SetPoint(p[4], w, p[4], p[5], p[6])
+            if p[7] then t:SetHeight(1) else t:SetWidth(1) end
+            t:SetVertexColor(r, g, b, a) t:Show()
+        end
+    end
+    Frame4(fx.line, 3, 0.55)
+    if mode == "royal" then Frame4(fx.line2, 6, 0.28) else for i = 1, 4 do fx.line2[i]:Hide() end end
+    local sz = mode == "royal" and 7 or 5
+    local o = (inset or 1) + 2
+    local C = { { "TOPLEFT", o, -o }, { "TOPRIGHT", -o, -o }, { "BOTTOMLEFT", o, o }, { "BOTTOMRIGHT", -o, o } }
+    for i, c in ipairs(C) do
+        local t = fx.stud[i]
+        t:ClearAllPoints()
+        t:SetPoint("CENTER", w, c[1], c[2], c[3])
+        t:SetSize(sz, sz) t:SetVertexColor(r, g, b, 0.95)
+        if t.SetRotation then t:SetRotation(mode == "royal" and math.rad(45) or 0) end
+        t:Show()
+    end
+    if mode == "royal" and w.bar and w.bar:IsShown() then
+        fx.rule:ClearAllPoints()
+        fx.rule:SetPoint("TOPLEFT", w.bar, "BOTTOMLEFT", 0, 0) fx.rule:SetPoint("TOPRIGHT", w.bar, "BOTTOMRIGHT", 0, 0)
+        fx.rule:SetHeight(1) fx.rule:SetVertexColor(r, g, b, 0.8) fx.rule:Show()
+    else fx.rule:Hide() end
+end
+
+-- little padlock in the title bar while the window position is locked
+function F.UpdateLockCue()
+    if not win then return end
+    if not win.lockCue then
+        win.lockCue = win:CreateTexture(nil, "OVERLAY", nil, 6)
+        win.lockCue:SetTexture("Interface\\PetBattles\\PetBattle-LockIcon")
+        win.lockCue:SetSize(13, 13)
+        win.lockCue:SetPoint("TOPLEFT", win, "TOPLEFT", 8, -6)
+    end
+    local e = B.db.edgeColor or B.DEFAULTS.edgeColor
+    win.lockCue:SetVertexColor(e[1], e[2], e[3], 1)
+    win.lockCue:SetShown(B.db.lockPos and true or false)
 end
 
 function F.ApplyLook()
@@ -855,6 +942,7 @@ function F.ApplyLook()
     end
     win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
     F.ApplyScale()
+    pcall(F.UpdateLockCue)
     if B.BankUI then B.BankUI.ApplyLook() end
 end
 

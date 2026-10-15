@@ -40,6 +40,8 @@ B.DEFAULTS = {
     guildBankReplace = true,
     edgeStyle = "line",     -- line | tooltip | none
     edgeSize = 1,           -- thickness of the line border
+    flair = "none",         -- none | gilded | royal: optional extra trim
+    pulse = false,
     showTitleBar = true,
     titleMode = "name",     -- name | char | bags | none
     titleSize = 15,
@@ -112,7 +114,7 @@ end
 -- "sync all" is off; the layout keys (slot size, spacing, padding, slots per row) are always their own.
 ----------------------------------------------------------------------
 B.LOOK = {}
-for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize showTitleBar " ..
+for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize flair pulse showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
     "borderMode borderColor borderSize borderMinQuality glowQuest glowQuality glowMinQuality glowStrength junkDim ilvl " ..
     "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end

@@ -134,6 +134,11 @@ local SECTIONS = {
         { key = "glowMinQuality", kind = "slider", label = "Quality glows start at (4 = epic)", min = 2, max = 6, step = 1 },
         { key = "glowStrength", kind = "slider", label = "Glow brightness", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
     } },
+    { id = "flair", title = "Flair", scope = "all", rows = {
+        { key = "flair", kind = "cycle", label = "Window trim", values = { "none", "gilded", "royal" },
+          names = { none = "None", gilded = "Gilded line and studs", royal = "Royal: double line, diamonds, title rule" } },
+        { key = "pulse", kind = "check", label = "Pulse the item glows" },
+    } },
     { id = "footer", title = "Bottom line", scope = "all", rows = {
         { key = "showFooter", kind = "check", label = "Show the slot counter (gold is set below)" },
         { key = "counterMode", kind = "cycle", label = "Slot counter", values = { "used", "free", "freeonly", "none" },
@@ -150,7 +155,7 @@ local SECTIONS = {
         { key = "showSort", kind = "check", label = "Sort button (only sorts when clicked)" },
         { key = "fillFront", kind = "check", label = "New items go to the first free slot" },
         { key = "glowNew", kind = "check", label = "Glow new items until you point at them" },
-        { key = "lockPos", kind = "check", label = "Lock window position" },
+        { key = "lockPos", kind = "check", label = "Lock window position (shows a padlock in the title bar)" },
         { key = "showMinimap", kind = "check", label = "Minimap button (right-click it for options)" },
         { key = "followGreedUI", kind = "check", label = "Follow GreedUI's colors and look (only when GreedUI is installed)" },
         { key = "showReagent", kind = "check", label = "Show reagent bag (if this game has one)" },
