@@ -133,8 +133,13 @@ local function BankBagIDs()
     local ids = { -1 }
     local first = (tonumber(_G.NUM_BAG_SLOTS) or 4) + 1
     local last = (tonumber(_G.NUM_BAG_SLOTS) or 4) + (tonumber(_G.NUM_BANKBAGSLOTS) or 7)
+    -- your own Reagent Bag sits at the id right after the carried bags, which is where the bank range starts
+    local reagentId = _G.Enum and _G.Enum.BagIndex and _G.Enum.BagIndex.ReagentBag
+    local mine = {}
+    if reagentId then mine[reagentId] = true
+    elseif tonumber(_G.NUM_REAGENTBAG_SLOTS) and _G.NUM_REAGENTBAG_SLOTS > 0 then mine[first] = true end
     for b = first, last do
-        if TabUnlocked(b) then ids[#ids + 1] = b end
+        if not mine[b] and TabUnlocked(b) then ids[#ids + 1] = b end
     end
     return ids
 end
