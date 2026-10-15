@@ -701,18 +701,28 @@ function F.Refresh()
     if not win:IsShown() then return end
     local text = (win.search:GetText() or ""):lower()
     local slots = B.ScanSlots()
-    SnapshotArrivals(slots)
+    pcall(SnapshotArrivals, slots)
+    -- one slot that fails to draw must never stop the rest (or the gold line) from showing
+    local function DrawAll()
+        for _, b in pairs(buttons) do
+            if b:IsShown() then
+                local ok, err = pcall(UpdateButton, b, text)
+                if not ok then B.lastDrawError = tostring(err) if not B.drawErrShown then B.drawErrShown = true B.Print("a slot failed to draw: " .. B.lastDrawError) end end
+            end
+        end
+    end
     if InCombat() then
         -- only refresh pictures in combat; moving buttons waits
-        for _, b in pairs(buttons) do if b:IsShown() then UpdateButton(b, text) end end
+        pcall(Footer, B.slotsNow or slots)
+        DrawAll()
         relayoutAfterCombat = true
-        Footer(B.slotsNow or slots)
         return
     end
-    Relayout(slots, text)
-    for _, b in pairs(buttons) do if b:IsShown() then UpdateButton(b, text) end end
+    local okR, errR = pcall(Relayout, slots, text)
+    if not okR then B.lastDrawError = tostring(errR) if not B.drawErrShown then B.drawErrShown = true B.Print("layout failed: " .. B.lastDrawError) end end
+    pcall(Footer, slots)
+    DrawAll()
     glowArmed = true    -- from now on, an item that wasn't in its slot before counts as new
-    Footer(slots)
 end
 
 local function Schedule()
