@@ -676,7 +676,7 @@ local function Footer(slots)
         text = ("|cffffd700%dg|r |cffc7c7cf%ds|r |cffeda55f%dc|r"):format(g, s, c)
     end
     win.money:SetText(text)
-    win.money:SetShown(B.db.showFooter and gm ~= "none")
+    win.money:SetShown(gm ~= "none")
     win.hint:Hide()
     F.UpdateBagBar()
 end

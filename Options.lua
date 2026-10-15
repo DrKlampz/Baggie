@@ -135,7 +135,7 @@ local SECTIONS = {
         { key = "glowStrength", kind = "slider", label = "Glow brightness", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
     } },
     { id = "footer", title = "Bottom line", scope = "all", rows = {
-        { key = "showFooter", kind = "check", label = "Show the bottom line (slots and gold)" },
+        { key = "showFooter", kind = "check", label = "Show the slot counter (gold is set below)" },
         { key = "counterMode", kind = "cycle", label = "Slot counter", values = { "used", "free", "freeonly", "none" },
           names = { used = "Used / total", free = "Free of total", freeonly = "Free only", none = "Hidden" } },
         { key = "goldMode", kind = "cycle", label = "Gold display", values = { "icons", "text", "gold", "none" },
