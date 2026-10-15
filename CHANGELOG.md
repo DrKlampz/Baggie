@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- New-item glow now only marks items that came into your bags from outside (loot, mail, bank, vendor, trade). Moving or swapping items inside the bags no longer lights them up.
 - Characters window (shift-click the minimap button): delete a character's saved spots, and deleted characters are spotted and removed automatically.
 
 ## v0.5.1

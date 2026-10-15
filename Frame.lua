@@ -123,7 +123,30 @@ end
 local lastSeen = {}      -- [bag:slot] = itemID last time this slot was drawn, to spot new arrivals
 local glowArmed = false  -- the first draw after login only records what's already there
 
-local function UpdateGlow(btn, tex, quality, id)
+-- "New" means it came into your bags from somewhere else (loot, mail, bank, vendor, trade). Moving or swapping items
+-- inside the bags changes which slot holds what, but not how many of each item you carry, so it is not new.
+local lastCount = {}     -- [bag:slot] = stack size last time this slot was drawn
+local prevTotals         -- [itemID] = how many you carried at the last refresh
+local arrived = {}       -- [itemID] = true for items you carry more of than at the last refresh
+local loadedAt = GetTime and GetTime() or 0
+local function SnapshotArrivals(slots)
+    -- an item held on the mouse has left its slot for a moment; wait until it is put down
+    if _G.GetCursorInfo and GetCursorInfo() == "item" then wipe(arrived) return end
+    local totals = {}
+    for _, sl in ipairs(slots or {}) do
+        local tex, count, _, _, _, id = B.SlotInfo(sl.bag, sl.slot)
+        if tex and id then totals[id] = (totals[id] or 0) + (tonumber(count) or 1) end
+    end
+    wipe(arrived)
+    if prevTotals and GetTime() - loadedAt > 5 then
+        for id, n in pairs(totals) do
+            if n > (prevTotals[id] or 0) then arrived[id] = true end
+        end
+    end
+    prevTotals = totals
+end
+
+local function UpdateGlow(btn, tex, quality, id, count)
     local r, g, b
     if tex and B.db.glowQuest then
         local kind = QuestKind(btn, id)
@@ -134,9 +157,11 @@ local function UpdateGlow(btn, tex, quality, id)
         r, g, b = QualityColor(quality)
     end
     local key = btn.bag .. ":" .. btn.slot
-    if tex and id and lastSeen[key] ~= id and glowArmed then btn.baggieNew = true end
+    local n = tonumber(count) or 1
+    if tex and id and glowArmed and arrived[id] and (lastSeen[key] ~= id or n > (lastCount[key] or 0)) then btn.baggieNew = true end
     if not tex then btn.baggieNew = nil end
     lastSeen[key] = tex and id or nil
+    lastCount[key] = tex and n or nil
     if not r and tex and B.db.glowNew and btn.baggieNew then r, g, b = 0.4, 1, 0.6 end
     if r then
         btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
@@ -181,7 +206,7 @@ local function UpdateButton(btn, text)
         btn.border:Hide()
     end
 
-    UpdateGlow(btn, tex, quality, id)
+    UpdateGlow(btn, tex, quality, id, count)
 
     local dim = 1
     if tex and quality == 0 and B.db.junkDim then dim = tonumber(B.db.junkAlpha) or 0.55 end
@@ -676,6 +701,7 @@ function F.Refresh()
     if not win:IsShown() then return end
     local text = (win.search:GetText() or ""):lower()
     local slots = B.ScanSlots()
+    SnapshotArrivals(slots)
     if InCombat() then
         -- only refresh pictures in combat; moving buttons waits
         for _, b in pairs(buttons) do if b:IsShown() then UpdateButton(b, text) end end
