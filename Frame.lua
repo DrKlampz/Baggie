@@ -167,7 +167,7 @@ local glowArmed = false  -- the first draw after login only records what's alrea
 
 -- "New" means it came into your bags from somewhere else (loot, mail, bank, vendor, trade). Moving or swapping items
 -- inside the bags changes which slot holds what, but not how many of each item you carry, so it is not new.
-local lastCount = {}     -- [bag:slot] = stack size last time this slot was drawn
+local lastStack = {}     -- [bag:slot] = stack size last time this slot was drawn
 local prevTotals         -- [itemID] = how many you carried at the last refresh
 local arrived = {}       -- [itemID] = true for items you carry more of than at the last refresh
 local loadedAt = GetTime and GetTime() or 0
@@ -201,10 +201,10 @@ local function UpdateGlow(btn, tex, quality, id, count)
     end
     local key = btn.bag .. ":" .. btn.slot
     local n = tonumber(count) or 1
-    if tex and id and glowArmed and arrived[id] and (lastSeen[key] ~= id or n > (lastCount[key] or 0)) then btn.baggieNew = true end
+    if tex and id and glowArmed and arrived[id] and (lastSeen[key] ~= id or n > (lastStack[key] or 0)) then btn.baggieNew = true end
     if not tex then btn.baggieNew = nil end
     lastSeen[key] = tex and id or nil
-    lastCount[key] = tex and n or nil
+    lastStack[key] = tex and n or nil
     if not r and tex and B.db.glowNew and btn.baggieNew then r, g, b = 0.4, 1, 0.6 end
     if r then
         btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
