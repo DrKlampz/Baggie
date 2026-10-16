@@ -1248,6 +1248,19 @@ function F.Debug()
             break
         end
     end
+    do
+        local pins, np, hit, cues, shown = B.Pins(), 0, 0, 0, 0
+        for _ in pairs(pins) do np = np + 1 end
+        for _, s in ipairs(slots) do
+            if s.itemID and pins[s.itemID] then
+                hit = hit + 1
+                local b = buttons[s.bag .. ":" .. s.slot]
+                if b and b.pinCue then cues = cues + 1 if b.pinCue:IsShown() then shown = shown + 1 end end
+            end
+        end
+        P(("saved spots: %d, showPinMark=%s, sharedPins=%s, bag items that match a saved spot=%d, with a cue made=%d, cue shown=%d (key %s)")
+          :format(np, T(B.db.showPinMark), T(B.db.sharedPins), hit, cues, shown, T(B.CharKey())))
+    end
     if win then P(("window: shown=%s strata=%s level=%s alpha=%s"):format(T(win:IsShown()),
         T(win:GetFrameStrata()), T(win:GetFrameLevel()), T(win:GetAlpha()))) end
 end
