@@ -172,6 +172,7 @@ local SECTIONS = {
     { id = "vendor", title = "Vendors and mail", scope = "inv", rows = {
         { key = "autoOpen", kind = "check", label = "Open bags at vendor, mail, bank, auction house" },
         { key = "sellButton", kind = "check", label = "Sell junk button at vendors" },
+        { key = "debugBank", kind = "check", label = "Print bank diagnostics to chat (for troubleshooting)" },
         { key = "autoSell", kind = "check", label = "Sell grey items automatically at vendors" },
     } },
 }

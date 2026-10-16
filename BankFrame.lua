@@ -353,30 +353,70 @@ SoonBank = function()
     C_Timer.After(0.1, function() pendingBank = nil if bw and bw:IsShown() then pcall(BankRefresh) end end)
 end
 
+local function Dbg(msg) if B.db and B.db.debugBank then B.Print("[bank] " .. msg) end end
+
+local function OpenBankWindow(why)
+    if B.db.bankReplace == false then RestoreBlizzardBank() return end
+    local ok, err = pcall(function()
+        BankCreate()
+        F.ApplyLook()
+        bankOpen = true
+        HideBlizzardBank()
+        bw:Show()
+    end)
+    if not ok then
+        B.Print("bank window error, using the game's bank instead: " .. tostring(err))
+        B.db.bankReplace = false
+        bankOpen = false
+        RestoreBlizzardBank()
+        return
+    end
+    Dbg(("opened by %s: shown=%s size=%dx%d"):format(why, tostring(bw:IsShown()), bw:GetWidth() or 0, bw:GetHeight() or 0))
+    C_Timer.After(0.4, function()
+        if bankOpen and bw and not bw:IsShown() then
+            Dbg("window got hidden right after opening, showing it again")
+            pcall(bw.Show, bw)
+        end
+    end)
+end
+
 ev:SetScript("OnEvent", function(_, event)
     if not B.db then return end
     if event == "BANKFRAME_OPENED" then
-        if B.db.bankReplace == false then RestoreBlizzardBank() return end
-        local ok, err = pcall(function()
-            BankCreate()
-            F.ApplyLook()
-            bankOpen = true
-            HideBlizzardBank()
-            bw:Show()
-        end)
-        if not ok then
-            B.Print("bank window error, using the game's bank instead: " .. tostring(err))
-            B.db.bankReplace = false
-            bankOpen = false
-            RestoreBlizzardBank()
-        end
+        Dbg("BANKFRAME_OPENED received")
+        OpenBankWindow("BANKFRAME_OPENED")
     elseif event == "BANKFRAME_CLOSED" then
+        Dbg("BANKFRAME_CLOSED received")
         bankOpen = false
         if bw and bw:IsShown() then bw:Hide() end
     else
         if bw and bw:IsShown() then SoonBank() end
     end
 end)
+
+-- the game also announces a banker through the interaction manager; if BANKFRAME_OPENED never arrives
+-- (or arrives differently after a patch), open the window from that instead
+do
+    local im = CreateFrame("Frame")
+    for _, e in ipairs({ "PLAYER_INTERACTION_MANAGER_FRAME_SHOW", "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" }) do
+        pcall(im.RegisterEvent, im, e)
+    end
+    im:SetScript("OnEvent", function(_, event, kind)
+        if not B.db then return end
+        local PT = _G.Enum and _G.Enum.PlayerInteractionType
+        local isBank = PT and kind ~= nil and (kind == PT.Banker or kind == PT.AccountBanker or kind == PT.CharacterBanker)
+        Dbg(("%s type=%s bank=%s"):format(event, tostring(kind), tostring(isBank and true or false)))
+        if not isBank then return end
+        if event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" then
+            C_Timer.After(0.5, function()
+                if not bankOpen or not (bw and bw:IsShown()) then OpenBankWindow("interaction manager") end
+            end)
+        else
+            bankOpen = false
+            if bw and bw:IsShown() then bw:Hide() end
+        end
+    end)
+end
 
 ----------------------------------------------------------------------
 -- Guild bank
