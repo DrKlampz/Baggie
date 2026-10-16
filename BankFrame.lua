@@ -131,6 +131,11 @@ end
 
 local function BankBagIDs()
     local ids = { -1 }
+    -- the tabbed bank has no main bank bag (-1): it only reports a phantom 32 empty slots, so leave it out
+    do
+        local E, CB = _G.Enum, _G.C_Bank
+        if E and E.BankType and E.BagIndex and E.BagIndex.CharacterBankTab_1 and CB and CB.FetchPurchasedBankTabIDs then ids = {} end
+    end
     local first = (tonumber(_G.NUM_BAG_SLOTS) or 4) + 1
     local last = (tonumber(_G.NUM_BAG_SLOTS) or 4) + (tonumber(_G.NUM_BANKBAGSLOTS) or 7)
     -- your own Reagent Bag sits at the id right after the carried bags, which is where the bank range starts
