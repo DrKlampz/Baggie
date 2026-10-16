@@ -855,6 +855,14 @@ function B.BankDebug()
         local num = B.NumSlots(b)
         if num > 0 then raw[#raw + 1] = b .. "=" .. num end
     end
+    local filled = {}
+    for _, b in ipairs(BankBagIDs()) do
+        local c = 0
+        for sl = 1, B.NumSlots(b) do local _, _, _, _, lk = B.SlotInfo(b, sl) if lk then c = c + 1 end end
+        filled[#filled + 1] = b .. "=" .. c
+    end
+    P("bank: items found per bag: " .. table.concat(filled, " ") ..
+      "  canView=" .. T(CB and CB.CanViewBank and select(2, pcall(CB.CanViewBank, E and E.BankType and E.BankType.Character))))
     P("bank: every bag id with slots: " .. table.concat(raw, " "))
     if E and E.BagIndex then
         local names = {}
