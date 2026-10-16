@@ -775,6 +775,60 @@ do
     end)
 end
 
+-- last line of defence: whatever event the game uses, notice a banker conversation or the game's own bank
+-- window appearing and open Baggie's window from that. Prints (once per visit) if it still cannot.
+do
+    local PT = _G.Enum and _G.Enum.PlayerInteractionType
+    local CPI = _G.C_PlayerInteraction or _G.C_PlayerInteractionManager
+    local wasAtBanker, visit = false, 0
+    local reported = false
+    local function AtBanker()
+        if not (PT and CPI and CPI.IsInteractingWithNpcOfType) then return false end
+        for _, k in ipairs({ "Banker", "CharacterBanker", "AccountBanker" }) do
+            if PT[k] then
+                local ok, r = pcall(CPI.IsInteractingWithNpcOfType, PT[k])
+                if ok and r then return true end
+            end
+        end
+        return false
+    end
+    local function GameBankShown()
+        for _, n in ipairs({ "BankFrame", "BankPanel" }) do
+            local f = _G[n]
+            if f and f.IsShown and f:IsShown() and f:GetParent() ~= hider then return true end
+        end
+        return false
+    end
+    local t = 0
+    local tick = CreateFrame("Frame")
+    tick:SetScript("OnUpdate", function(_, dt)
+        t = t + dt
+        if t < 0.4 then return end
+        t = 0
+        if not B.db or B.db.bankReplace == false then return end
+        local at = AtBanker() or GameBankShown()
+        if at and not wasAtBanker then visit = 0 end
+        if at then
+            visit = visit + 0.4
+            -- only in the first moments of a visit, so closing the window by hand sticks
+            if visit <= 3 and not (bw and bw:IsShown()) then
+                Dbg("banker detected by the watcher")
+                bankOpen = false
+                OpenBankWindow("watcher")
+                if not (bw and bw:IsShown()) and visit > 2.5 and not reported then
+                    reported = true
+                    B.Print("bank: I can see the banker but Baggie's bank window would not show. Type /baggie debug and send me the output.")
+                end
+            end
+        elseif wasAtBanker then
+            bankOpen = false
+            reported = false
+            if bw and bw:IsShown() then bw:Hide() end
+        end
+        wasAtBanker = at
+    end)
+end
+
 function BU.IsOpen() return bankOpen end
 
 function BU.ApplyLook()
