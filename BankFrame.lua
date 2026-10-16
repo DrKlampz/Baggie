@@ -780,7 +780,7 @@ end
 do
     local PT = _G.Enum and _G.Enum.PlayerInteractionType
     local CPI = _G.C_PlayerInteraction or _G.C_PlayerInteractionManager
-    local wasAtBanker, visit = false, 0
+    local wasAtBanker, visit, watcherOpened = false, 0, false
     local reported = false
     local function AtBanker()
         if not (PT and CPI and CPI.IsInteractingWithNpcOfType) then return false end
@@ -793,9 +793,10 @@ do
         return false
     end
     local function GameBankShown()
+        -- IsVisible, not IsShown: a child panel keeps its own "shown" flag even while its window is closed
         for _, n in ipairs({ "BankFrame", "BankPanel" }) do
             local f = _G[n]
-            if f and f.IsShown and f:IsShown() and f:GetParent() ~= hider then return true end
+            if f and f.IsVisible and f:IsVisible() and f:GetParent() ~= hider then return true end
         end
         return false
     end
@@ -815,15 +816,17 @@ do
                 Dbg("banker detected by the watcher")
                 bankOpen = false
                 OpenBankWindow("watcher")
+                watcherOpened = true
                 if not (bw and bw:IsShown()) and visit > 2.5 and not reported then
                     reported = true
                     B.Print("bank: I can see the banker but Baggie's bank window would not show. Type /baggie debug and send me the output.")
                 end
             end
-        elseif wasAtBanker then
-            bankOpen = false
-            reported = false
-            if bw and bw:IsShown() then bw:Hide() end
+        else
+            -- not at a banker any more (or never was): a window the watcher opened must not stay up
+            if watcherOpened and bw and bw:IsShown() then bw:Hide() end
+            if wasAtBanker then bankOpen = false end
+            watcherOpened, reported = false, false
         end
         wasAtBanker = at
     end)
