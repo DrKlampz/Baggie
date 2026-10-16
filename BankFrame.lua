@@ -837,6 +837,39 @@ do
     end)
 end
 
+-- what the bank looks like to the game right now, for /baggie debug
+function B.BankDebug()
+    local P, T = B.Print, tostring
+    local E, CB = _G.Enum, _G.C_Bank
+    P(("bank: window shown=%s  game BankFrame=%s visible=%s parent=%s  BankPanel=%s"):format(
+        T(bw and bw:IsShown()), T(_G.BankFrame ~= nil), T(_G.BankFrame and _G.BankFrame:IsVisible()),
+        T(_G.BankFrame and _G.BankFrame:GetParent() == hider and "hidden-holder" or "normal"), T(_G.BankPanel ~= nil)))
+    local n, full = 0, nil
+    if _G.GetNumBankSlots then n, full = _G.GetNumBankSlots() end
+    P(("bank: bought bag slots=%s full=%s  NUM_BANKBAGSLOTS=%s NUM_BAG_SLOTS=%s"):format(T(n), T(full), T(_G.NUM_BANKBAGSLOTS), T(_G.NUM_BAG_SLOTS)))
+    local ids = {}
+    for _, b in ipairs(BankBagIDs()) do ids[#ids + 1] = b .. "=" .. B.NumSlots(b) end
+    P("bank: bags drawn: " .. table.concat(ids, " "))
+    local raw = {}
+    for b = -1, 14 do
+        local num = B.NumSlots(b)
+        if num > 0 then raw[#raw + 1] = b .. "=" .. num end
+    end
+    P("bank: every bag id with slots: " .. table.concat(raw, " "))
+    if E and E.BagIndex then
+        local names = {}
+        for k, v in pairs(E.BagIndex) do if tostring(k):find("Bank") then names[#names + 1] = k .. "=" .. T(v) end end
+        table.sort(names)
+        P("bank: Enum.BagIndex: " .. table.concat(names, " "))
+    end
+    if CB and CB.FetchPurchasedBankTabIDs and E and E.BankType then
+        local ok, t = pcall(CB.FetchPurchasedBankTabIDs, E.BankType.Character)
+        P(("bank: purchased tab ids (character): %s"):format(ok and type(t) == "table" and ("[" .. table.concat(t, ",") .. "]") or T(t)))
+    else
+        P("bank: no tab API (old-style bank)")
+    end
+end
+
 function BU.IsOpen() return bankOpen end
 
 function BU.ApplyLook()

@@ -1261,6 +1261,7 @@ function F.Debug()
         P(("saved spots: %d, showPinMark=%s, sharedPins=%s, bag items that match a saved spot=%d, with a cue made=%d, cue shown=%d (key %s)")
           :format(np, T(B.db.showPinMark), T(B.db.sharedPins), hit, cues, shown, T(B.CharKey())))
     end
+    if B.BankDebug then pcall(B.BankDebug) end
     if win then P(("window: shown=%s strata=%s level=%s alpha=%s"):format(T(win:IsShown()),
         T(win:GetFrameStrata()), T(win:GetFrameLevel()), T(win:GetAlpha()))) end
 end
