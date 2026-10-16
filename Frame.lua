@@ -268,6 +268,15 @@ local function UpdateButton(btn, text)
 
     UpdateGlow(btn, tex, quality, id, count)
 
+    -- saved-spot cue first, so nothing later in this function can stop it from showing
+    do
+        local okP, errP = pcall(function()
+            local pinsNow = B.Pins()
+            PinCue(btn, not btn.noPins and B.db.showPinMark and id ~= nil and pinsNow[id] ~= nil)
+        end)
+        if not okP and not B.pinErrShown then B.pinErrShown = true B.Print("saved-spot mark failed: " .. tostring(errP)) end
+    end
+
     local dim = 1
     if tex and quality == 0 and B.db.junkDim then dim = tonumber(B.db.junkAlpha) or 0.55 end
     if text ~= "" and not Matches(text, link) then dim = 0.25 end
@@ -297,7 +306,6 @@ local function UpdateButton(btn, text)
     -- the little pin mark: this item type has a saved spot
     local pins = B.Pins()
     btn.pinMark:SetShown(false)
-    PinCue(btn, not btn.noPins and B.db.showPinMark and id ~= nil and pins[id] ~= nil)
     if id and pins[id] then
         if tex then pins[id].icon = tex end
         local n = ItemName(link)
