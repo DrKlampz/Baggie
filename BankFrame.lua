@@ -176,6 +176,9 @@ local BankRefresh
 local function BankRefreshRaw()
     if not (bw and bw:IsShown() and B.db) then return end
     local cell, _, pad = CellMetrics()
+    -- the same window switches as the bag window: Sort button and search box
+    if bw.sort then bw.sort:SetShown(B.db.showSort ~= false) end
+    if bw.search then bw.search:SetShown(B.db.showSearch ~= false) if bw.searchLabel then bw.searchLabel:SetShown(B.db.showSearch ~= false) end end
     local gap = BankGap()
     local cols = math.max(6, math.min(24, tonumber(B.db.bankCols) or 14))
     local text = (bw.search:GetText() or ""):lower()
@@ -508,6 +511,8 @@ local GuildRefresh
 local function GuildRefreshRaw()
     if not (gw and gw:IsShown() and B.db and _G.GetGuildBankItemInfo) then return end
     local cell, _, pad = CellMetrics()
+    if gw.sort then gw.sort:SetShown(B.db.showSort ~= false) end
+    if gw.search then gw.search:SetShown(B.db.showSearch ~= false) if gw.searchLabel then gw.searchLabel:SetShown(B.db.showSearch ~= false) end end
     local gap = BankGap()
     local cols = math.max(7, math.min(24, tonumber(B.db.bankCols) or 14))
     local tab = GuildTab()
