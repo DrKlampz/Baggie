@@ -851,7 +851,7 @@ function B.BankDebug()
     for _, b in ipairs(BankBagIDs()) do ids[#ids + 1] = b .. "=" .. B.NumSlots(b) end
     P("bank: bags drawn: " .. table.concat(ids, " "))
     local raw = {}
-    for b = -1, 14 do
+    for b = -3, 40 do
         local num = B.NumSlots(b)
         if num > 0 then raw[#raw + 1] = b .. "=" .. num end
     end
@@ -869,6 +869,30 @@ function B.BankDebug()
         for k, v in pairs(E.BagIndex) do if tostring(k):find("Bank") then names[#names + 1] = k .. "=" .. T(v) end end
         table.sort(names)
         P("bank: Enum.BagIndex: " .. table.concat(names, " "))
+    end
+    -- probe the game's own bank buttons for the bag/slot ids they really use
+    local seen, shown = 0, {}
+    local function Probe(f, depth)
+        if seen >= 4 or depth > 6 or not f or not f.GetChildren then return end
+        for _, c in ipairs({ f:GetChildren() }) do
+            local ot = c.GetObjectType and c:GetObjectType()
+            if ot == "Button" and c.GetID and seen < 4 then
+                local function R(m, ...) if c[m] then local ok, a, b = pcall(c[m], c, ...) if ok then return tostring(a) .. (b ~= nil and ("/" .. tostring(b)) or "") end end return "-" end
+                local ph = c.GetParent and c:GetParent()
+                if c.icon or c.Icon or (c.GetName and c:GetName() and tostring(c:GetName()):find("Item")) or c.GetBankTabID or c.GetContainerSlotID then
+                    seen = seen + 1
+                    shown[#shown + 1] = ("[%s id=%s parentId=%s tab=%s cslot=%s]"):format(tostring(c.GetName and c:GetName()), tostring(c:GetID()), tostring(ph and ph.GetID and ph:GetID()), R("GetBankTabID"), R("GetContainerSlotID"))
+                end
+            end
+            Probe(c, depth + 1)
+        end
+    end
+    if _G.BankPanel then Probe(_G.BankPanel, 0) end
+    if _G.BankFrame then Probe(_G.BankFrame, 0) end
+    P("bank: game buttons: " .. (#shown > 0 and table.concat(shown, " ") or "none found"))
+    if _G.BankPanel and _G.BankPanel.GetActiveBankType then
+        local ok, t = pcall(_G.BankPanel.GetActiveBankType, _G.BankPanel)
+        P("bank: BankPanel active type=" .. T(ok and t or nil) .. " selectedTab=" .. T(_G.BankPanel.selectedTabID))
     end
     if CB and CB.FetchPurchasedBankTabIDs and E and E.BankType then
         local ok, t = pcall(CB.FetchPurchasedBankTabIDs, E.BankType.Character)
