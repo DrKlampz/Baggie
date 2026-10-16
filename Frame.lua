@@ -101,6 +101,48 @@ local function StyleText(btn)
     btn.pinMark:SetSize(ps, ps)
 end
 
+
+-- The saved-spot cue: a padlock in the corner and a thin colored outline, drawn on its own frame above everything
+-- else on the slot so the template's art, borders and glows can never cover it.
+local PAD_ICON = "Interface\\PetBattles\\PetBattle-LockIcon"
+local function MakePinCue(owner)
+    local layer = CreateFrame("Frame", nil, owner)
+    layer:SetAllPoints(owner)
+    layer:SetFrameLevel((owner:GetFrameLevel() or 1) + 12)
+    layer:EnableMouse(false)
+    layer.back = layer:CreateTexture(nil, "OVERLAY", nil, 6)
+    layer.back:SetTexture("Interface\\Buttons\\WHITE8X8")
+    layer.back:SetVertexColor(0, 0, 0, 0.7)
+    layer.lock = layer:CreateTexture(nil, "OVERLAY", nil, 7)
+    layer.lock:SetTexture(PAD_ICON)
+    layer.edge = {}
+    for i = 1, 4 do
+        local t = layer:CreateTexture(nil, "OVERLAY", nil, 5)
+        t:SetTexture("Interface\\Buttons\\WHITE8X8")
+        layer.edge[i] = t
+    end
+    layer.edge[1]:SetPoint("TOPLEFT", 1, -1) layer.edge[1]:SetPoint("TOPRIGHT", -1, -1) layer.edge[1]:SetHeight(1)
+    layer.edge[2]:SetPoint("BOTTOMLEFT", 1, 1) layer.edge[2]:SetPoint("BOTTOMRIGHT", -1, 1) layer.edge[2]:SetHeight(1)
+    layer.edge[3]:SetPoint("TOPLEFT", 1, -1) layer.edge[3]:SetPoint("BOTTOMLEFT", 1, 1) layer.edge[3]:SetWidth(1)
+    layer.edge[4]:SetPoint("TOPRIGHT", -1, -1) layer.edge[4]:SetPoint("BOTTOMRIGHT", -1, 1) layer.edge[4]:SetWidth(1)
+    layer:Hide()
+    owner.pinCue = layer
+    return layer
+end
+
+local function PinCue(owner, on)
+    local layer = owner.pinCue or MakePinCue(owner)
+    if not on then layer:Hide() return end
+    local look = B.GetLookSettings and B.GetLookSettings() or B.db
+    local pc = look.pinColor or B.DEFAULTS.pinColor
+    local sz = math.max(11, (tonumber(B.db.pinSize) or 7) + 5)
+    layer.lock:ClearAllPoints() layer.lock:SetPoint("TOPLEFT", layer, "TOPLEFT", 2, -2) layer.lock:SetSize(sz, sz)
+    layer.lock:SetVertexColor(pc[1], pc[2], pc[3], 1)
+    layer.back:ClearAllPoints() layer.back:SetPoint("TOPLEFT", layer, "TOPLEFT", 1, -1) layer.back:SetSize(sz + 2, sz + 2)
+    for i = 1, 4 do layer.edge[i]:SetVertexColor(pc[1], pc[2], pc[3], 0.7) end
+    layer:Show()
+end
+
 -- Is this slot a quest item, or an item that starts a quest? Returns "quest", "starts" or nil.
 local function QuestKind(btn, id)
     local getQ = (_G.C_Container and _G.C_Container.GetContainerItemQuestInfo) or _G.GetContainerItemQuestInfo
@@ -254,7 +296,8 @@ local function UpdateButton(btn, text)
 
     -- the little pin mark: this item type has a saved spot
     local pins = B.Pins()
-    btn.pinMark:SetShown(not btn.noPins and B.db.showPinMark and id ~= nil and pins[id] ~= nil)
+    btn.pinMark:SetShown(false)
+    PinCue(btn, not btn.noPins and B.db.showPinMark and id ~= nil and pins[id] ~= nil)
     if id and pins[id] then
         if tex then pins[id].icon = tex end
         local n = ItemName(link)
@@ -519,6 +562,8 @@ local function GetGhost(c)
     g.pinMark:SetTexture("Interface\\Buttons\\WHITE8X8")
     g.pinMark:SetVertexColor(GOLD[1], GOLD[2], GOLD[3], 1)
     g.pinMark:SetSize(7, 7) g.pinMark:SetPoint("TOPLEFT", 1, -1)
+    g.pinMark:Hide()
+    g.cueOwner = true
     g.pickGlow = g:CreateTexture(nil, "OVERLAY", nil, 6)
     g.pickGlow:SetTexture("Interface\\Buttons\\WHITE8X8")
     g.pickGlow:SetVertexColor(0.3, 0.9, 1, 0.45)
@@ -660,6 +705,7 @@ local function Relayout(slots, text)
             g.name = p.name
             g.icon:SetTexture(p.icon)
             g.pickGlow:SetShown(pick ~= nil and pick.cell == c)
+            PinCue(g, B.db.showPinMark and true or false)
             g:ClearAllPoints()
             g:SetPoint("TOPLEFT", win, "TOPLEFT", px, py)
             g:Show()
