@@ -730,6 +730,7 @@ end)
 
 gev:SetScript("OnEvent", function(_, event)
     if not B.db then return end
+    if event == "GUILDBANKFRAME_OPENED" or event == "GUILDBANKFRAME_CLOSED" then Dbg("guild " .. event .. " received") end
     if event == "GUILDBANKFRAME_OPENED" then
         if B.db.guildBankReplace == false then return end
         OpenGuild()
@@ -745,6 +746,34 @@ gev:SetScript("OnEvent", function(_, event)
         if gw and gw:IsShown() then SoonGuild() end
     end
 end)
+
+-- the guild banker is also announced through the interaction manager (and the guild bank window may be
+-- what the game shows without ever sending GUILDBANKFRAME_OPENED): open Baggie's from that as well
+do
+    local im = CreateFrame("Frame")
+    for _, e in ipairs({ "PLAYER_INTERACTION_MANAGER_FRAME_SHOW", "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" }) do
+        pcall(im.RegisterEvent, im, e)
+    end
+    im:SetScript("OnEvent", function(_, event, kind)
+        if not B.db then return end
+        local PT = _G.Enum and _G.Enum.PlayerInteractionType
+        local isGuild = PT and kind ~= nil and PT.GuildBanker ~= nil and kind == PT.GuildBanker
+        if not isGuild then return end
+        Dbg(("guild %s type=%s"):format(event, tostring(kind)))
+        if event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" then
+            if B.db.guildBankReplace == false then return end
+            C_Timer.After(0.5, function()
+                if not (gw and gw:IsShown()) then OpenGuild() Dbg("guild window opened from the interaction manager") end
+                C_Timer.After(0.1, function() if gOpen then HideBlizzardGuildBank() end end)
+            end)
+        else
+            gOpen = false
+            if gw and gw:IsShown() then gw:Hide() end
+            local f = _G.GuildBankFrame
+            if f and not InCombatLockdown() then pcall(f.SetParent, f, UIParent) end
+        end
+    end)
+end
 
 function BU.IsOpen() return bankOpen end
 
