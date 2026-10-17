@@ -119,9 +119,16 @@ local function TabUnlocked(bag)
     if not isTab then return true end
     local ok, ids = pcall(CB.FetchPurchasedBankTabIDs, E.BankType.Character)
     if not ok or type(ids) ~= "table" or #ids == 0 then
-        -- nothing cached yet: ask the game for it and refresh when it answers
-        if CB.FetchPurchasedBankTabData then pcall(CB.FetchPurchasedBankTabData, E.BankType.Character) end
-        return true
+        -- none bought (or nothing cached yet): ask the game once and refresh when it answers
+        if CB.FetchPurchasedBankTabData and not B.tabsAsked then
+            B.tabsAsked = true
+            pcall(CB.FetchPurchasedBankTabData, E.BankType.Character)
+            if _G.C_Timer then
+                _G.C_Timer.After(0.6, function() if SoonBank then SoonBank() end end)
+                _G.C_Timer.After(1.8, function() if SoonBank then SoonBank() end end)
+            end
+        end
+        return false
     end
     for _, id in ipairs(ids) do
         if id == bag then return true end
@@ -330,7 +337,7 @@ local function BankRefreshRaw()
         if not bw.none then
             bw.none = bw:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             bw.none:SetPoint("TOP", bw, "TOP", 0, -70)
-            bw.none:SetText("No bank tabs unlocked on this character yet.")
+            bw.none:SetText("No bank tab bought yet.")
         end
         bw.none:Show()
         bw:SetSize(math.max(300, pad * 2 + cols * cell + (cols - 1) * gap), 62 + 40 + (B.db.bankShowBags ~= false and 44 or 30))
@@ -355,7 +362,26 @@ local function BankRefreshRaw()
         b:SetShown(B.db.bankShowBags ~= false)
         b:SetAlpha(i <= (tonumber(numBought) or 0) and 1 or 0.35)
     end
-    bw.buy:SetShown(not full and B.db.bankShowBags ~= false)
+    local CB, E = _G.C_Bank, _G.Enum
+    local tabbed = CB and CB.CanPurchaseBankTab and E and E.BankType and true or false
+    if tabbed then
+        for _, b in ipairs(bagSlotBtns) do b:Hide() end
+        local can = false
+        local okc, v = pcall(CB.CanPurchaseBankTab, E.BankType.Character)
+        if okc and v then can = true end
+        local cost
+        if can and CB.FetchNextPurchasableBankTabData then
+            local okd, d = pcall(CB.FetchNextPurchasableBankTabData, E.BankType.Character)
+            if okd and type(d) == "table" and d.tabCost then cost = d.tabCost end
+        end
+        bw.buy:SetText(cost and ("Buy tab (" .. MoneyText(cost) .. ")") or "Buy tab")
+        bw.buy:SetWidth(cost and 150 or 80)
+        bw.buy:SetShown(can)
+        bw.buy.tabbed = true
+    else
+        bw.buy.tabbed = false
+        bw.buy:SetShown(not full and B.db.bankShowBags ~= false)
+    end
 end
 BankRefresh = function() return B.Scoped("bank", BankRefreshRaw) end
 
@@ -462,7 +488,13 @@ local function BankCreate()
         bw.quick[#bw.quick + 1] = btn
     end
     bw.buy = Button(bw, "Buy bag slot", 90, function()
-        if _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
+        if bw.buy.tabbed then
+            local CB, E = _G.C_Bank, _G.Enum
+            if CB and CB.PurchaseBankTab and E and E.BankType then
+                pcall(CB.PurchaseBankTab, E.BankType.Character)
+                if _G.C_Timer then _G.C_Timer.After(0.5, function() if SoonBank then SoonBank() end end) end
+            end
+        elseif _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
     end)
     bw.buy:SetPoint("BOTTOMRIGHT", bw, "BOTTOMRIGHT", -12, 30)
     bw.buy:Hide()
