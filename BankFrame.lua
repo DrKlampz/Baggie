@@ -325,7 +325,19 @@ local function BankRefreshRaw()
     local row, secExtra = math.ceil(count / cols), 0
     for _, btn in pairs(bankBtns) do if not live[btn] then btn:Hide() end end
     local rows = row
-    bw:SetSize(pad * 2 + cols * cell + (cols - 1) * gap, 62 + rows * (cell + gap) + secExtra + (B.db.bankShowBags ~= false and 44 or 30))
+    if total == 0 then
+        rows = 1
+        if not bw.none then
+            bw.none = bw:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            bw.none:SetPoint("TOP", bw, "TOP", 0, -70)
+            bw.none:SetText("No bank tabs unlocked on this character yet.")
+        end
+        bw.none:Show()
+        bw:SetSize(math.max(300, pad * 2 + cols * cell + (cols - 1) * gap), 62 + 40 + (B.db.bankShowBags ~= false and 44 or 30))
+    elseif bw.none then bw.none:Hide() end
+    if total > 0 then
+        bw:SetSize(pad * 2 + cols * cell + (cols - 1) * gap, 62 + rows * (cell + gap) + secExtra + (B.db.bankShowBags ~= false and 44 or 30))
+    end
     local cm = B.db.counterMode
     if cm == "free" then bw.free:SetText(("%d free of %d"):format(total - used, total))
     elseif cm == "freeonly" then bw.free:SetText(("%d free"):format(total - used))
