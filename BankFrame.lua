@@ -410,14 +410,27 @@ local function BankCreate()
         { "Recipes", "Recipes and books", function(_, c) return c == 9 end },
         { "All", "Everything except quest items and items saved to a spot in your bags", function(_, c) return c ~= 12 end },
     }
+    -- one Deposit button; it opens a small menu so the title row stays uncluttered
     bw.quick = {}
-    local qx = 12 + 46 + 8
-    for _, q in ipairs(QUICK) do
-        local btn = Button(bw, q[1], 52, function() B.BankDepositWhere(q[3]) end)
-        btn:SetPoint("TOPLEFT", bw, "TOPLEFT", qx, -33)
-        qx = qx + 54
+    local menu = CreateFrame("Frame", nil, bw, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    menu:SetFrameStrata("DIALOG")
+    menu:SetSize(86, #QUICK * 22 + 10)
+    if menu.SetBackdrop then
+        menu:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        menu:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
+        menu:SetBackdropBorderColor(0.8, 0.65, 0.1, 1)
+    end
+    menu:Hide()
+    bw.depMenu = menu
+    bw.dep = Button(bw, "Deposit", 62, function() menu:SetShown(not menu:IsShown()) end)
+    bw.dep:SetPoint("LEFT", bw.sort, "RIGHT", 6, 0)
+    menu:SetPoint("TOPLEFT", bw.dep, "BOTTOMLEFT", 0, -2)
+    bw:HookScript("OnHide", function() menu:Hide() end)
+    for i, q in ipairs(QUICK) do
+        local btn = Button(menu, q[1], 76, function() menu:Hide() B.BankDepositWhere(q[3]) end)
+        btn:SetPoint("TOPLEFT", menu, "TOPLEFT", 5, -5 - (i - 1) * 22)
         btn:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:AddLine("Deposit: " .. q[1], 1, 1, 1)
             GameTooltip:AddLine(q[2], 0.8, 0.8, 0.8, true)
             GameTooltip:AddLine("Ctrl+Alt+click an item in your bags to send just that stack (add Shift for every stack of it).", 0.6, 0.6, 0.6, true)
