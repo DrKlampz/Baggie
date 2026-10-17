@@ -416,6 +416,121 @@ function B.SmartBankStore(bag, slot)
     return false
 end
 
+-- Moving things from your bags into the bank ------------------------------------------------------------
+-- a bank slot that can take this item: a stack of it with room first, else the first free slot
+function B.BankTarget(link, id, count)
+    local ui = B.BankUI
+    if not (ui and ui.BagIDs) then return end
+    local maxStack = 1
+    local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
+    if gi then
+        local _, _, _, _, _, _, _, ms = gi(link)
+        maxStack = tonumber(ms) or 1
+    end
+    local fam = B.ItemFamily(link)
+    local freeB, freeS
+    for _, b in ipairs(ui.BagIDs()) do
+        local bf = (b > 0) and B.BagFamily(b) or 0
+        if bf == 0 or (fam ~= 0 and _G.bit and _G.bit.band(fam, bf) ~= 0) then
+            for sl = 1, B.NumSlots(b) do
+                local _, c2, _, _, l2, id2 = B.SlotInfo(b, sl)
+                if not l2 then
+                    if not freeB then freeB, freeS = b, sl end
+                elseif id2 == id and (tonumber(c2) or 1) + (tonumber(count) or 1) <= maxStack then
+                    return b, sl
+                end
+            end
+        end
+    end
+    return freeB, freeS
+end
+
+-- the bags you carry: backpack, bag slots and the reagent bag
+function B.CarriedBagIDs()
+    local ids = { 0 }
+    for b = 1, tonumber(_G.NUM_BAG_SLOTS) or 4 do ids[#ids + 1] = b end
+    local rb = _G.Enum and _G.Enum.BagIndex and _G.Enum.BagIndex.ReagentBag
+    if rb and B.NumSlots(rb) > 0 then ids[#ids + 1] = rb end
+    return ids
+end
+
+local depositQueue, depositRunning, depositMoved = {}, false, 0
+local function DepositStep()
+    local job = table.remove(depositQueue, 1)
+    if not job then
+        depositRunning = false
+        if depositMoved > 0 then B.Say(("moved %d stack%s to the bank"):format(depositMoved, depositMoved == 1 and "" or "s")) end
+        depositMoved = 0
+        return
+    end
+    local ui = B.BankUI
+    if not (ui and ui.IsOpen and ui.IsOpen()) then depositQueue, depositRunning, depositMoved = {}, false, 0 return end
+    if _G.CursorHasItem and _G.CursorHasItem() then _G.ClearCursor() end
+    local _, count, locked, _, link, id = B.SlotInfo(job.bag, job.slot)
+    if link and not locked and id == job.id then
+        local tb, ts = B.BankTarget(link, id, count)
+        if not tb then
+            B.Say("the bank is full")
+            depositQueue, depositRunning = {}, false
+            return
+        end
+        B.Pickup(job.bag, job.slot)
+        B.Pickup(tb, ts)
+        if _G.CursorHasItem and _G.CursorHasItem() then _G.ClearCursor() else depositMoved = depositMoved + 1 end
+    end
+    _G.C_Timer.After(0.2, DepositStep)
+end
+local function StartDeposit(jobs)
+    if #jobs == 0 then return 0 end
+    for _, j in ipairs(jobs) do depositQueue[#depositQueue + 1] = j end
+    if not depositRunning then depositRunning = true DepositStep() end
+    return #jobs
+end
+
+-- one stack (or every stack of that item) from your bags into the bank
+function B.BankDeposit(bag, slot, allStacks)
+    local ui = B.BankUI
+    if not (ui and ui.IsOpen and ui.IsOpen()) then return 0 end
+    local _, _, _, _, link, id = B.SlotInfo(bag, slot)
+    if not link then return 0 end
+    local jobs = {}
+    if allStacks then
+        for _, b in ipairs(B.CarriedBagIDs()) do
+            for sl = 1, B.NumSlots(b) do
+                local _, _, _, _, l2, id2 = B.SlotInfo(b, sl)
+                if l2 and id2 == id then jobs[#jobs + 1] = { bag = b, slot = sl, id = id2 } end
+            end
+        end
+    else
+        jobs[1] = { bag = bag, slot = slot, id = id }
+    end
+    return StartDeposit(jobs)
+end
+
+-- every stack in your bags that test(itemID, classID, subclassID, quality) accepts; items with a saved spot stay put
+function B.BankDepositWhere(test)
+    local ui = B.BankUI
+    if not (ui and ui.IsOpen and ui.IsOpen()) then B.Print("open the bank first") return 0 end
+    local pins = B.Pins()
+    local jobs = {}
+    for _, b in ipairs(B.CarriedBagIDs()) do
+        for sl = 1, B.NumSlots(b) do
+            local _, _, locked, q, link, id = B.SlotInfo(b, sl)
+            if link and id and not locked and not pins[id] then
+                local cls, sub = 0, 0
+                if _G.C_Item and _G.C_Item.GetItemInfoInstant then
+                    local ok, _, _, _, _, _, c1, s1 = pcall(_G.C_Item.GetItemInfoInstant, id)
+                    if ok then cls, sub = c1 or 0, s1 or 0 end
+                end
+                if test(id, cls, sub, q) then jobs[#jobs + 1] = { bag = b, slot = sl, id = id } end
+            end
+        end
+    end
+    local n = StartDeposit(jobs)
+    if n == 0 then B.Print("nothing in your bags matches") end
+    return n
+end
+
 -- sort entry for one item (see PlanSort)
 function B.SortEntry(link, id, count, quality)
     local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
@@ -462,7 +577,7 @@ function B.SortBags(opt)
         -- items you saved to a spot stay in that spot; everything else is packed around them
         local fixed = {}
         if not opt.noPins then
-            for id, p in pairs(B.Pins()) do
+            for id, p in pairs(opt.pins or B.Pins()) do
                 local cs = B.Layout.CellsOf(p)
                 if #cs > 0 then fixed[id] = cs end
             end
@@ -605,6 +720,21 @@ function B.Pins()
     return B.db.chars[key].pins
 end
 
+-- the bank window has its own saved spots (cells count from the top left of the bank window)
+function B.BankPins()
+    if not B.db then return {} end
+    if B.db.sharedPins then
+        B.db.shared = B.db.shared or { pins = {} }
+        B.db.shared.bankPins = B.db.shared.bankPins or {}
+        return B.db.shared.bankPins
+    end
+    B.db.chars = B.db.chars or {}
+    local key = B.CharKey()
+    B.db.chars[key] = B.db.chars[key] or { pins = {} }
+    B.db.chars[key].bankPins = B.db.chars[key].bankPins or {}
+    return B.db.chars[key].bankPins
+end
+
 function B.SetPin(itemID, cell, icon, name)
     local pins = B.Pins()
     B.Layout.Place(pins, itemID, cell)
@@ -679,7 +809,9 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         B.db.keyring = not B.db.keyring refresh() B.Print("keyring " .. (B.db.keyring and "shown" or "hidden"))
         if B.db.keyring and B.NumSlots(_G.KEYRING_CONTAINER or -2) == 0 then B.Print("this character has no keyring slots to show") end
     elseif cmd == "unpin" and rest == "all" then
-        for k in pairs(B.Pins()) do B.Pins()[k] = nil end refresh() B.Print("all saved spots cleared")
+        for k in pairs(B.Pins()) do B.Pins()[k] = nil end
+        for k in pairs(B.BankPins()) do B.BankPins()[k] = nil end
+        refresh() B.Print("all saved spots cleared")
     elseif cmd == "pins" or cmd == "list" then
         local n = 0
         for id, p in pairs(B.Pins()) do

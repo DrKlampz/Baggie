@@ -271,7 +271,7 @@ local function UpdateButton(btn, text)
     -- saved-spot cue first, so nothing later in this function can stop it from showing
     do
         local okP, errP = pcall(function()
-            local pinsNow = B.Pins()
+            local pinsNow = btn.isBank and B.BankPins() or B.Pins()
             -- only the stack that sits in its saved cell gets the mark, not every stack of the same item
             local mark = pinsNow[id] ~= nil and btn.cell ~= nil and B.Layout.HasCell(pinsNow[id], btn.cell)
             PinCue(btn, not btn.noPins and B.db.showPinMark and id ~= nil and mark and true or false)
@@ -306,7 +306,7 @@ local function UpdateButton(btn, text)
     if cd and _G.CooldownFrame_Set then _G.CooldownFrame_Set(cd, tonumber(start) or 0, tonumber(dur) or 0, tonumber(enable) or 0) end
 
     -- the little pin mark: this item type has a saved spot
-    local pins = B.Pins()
+    local pins = btn.isBank and B.BankPins() or B.Pins()
     btn.pinMark:SetShown(false)
     if id and pins[id] then
         if tex then pins[id].icon = tex end
@@ -380,17 +380,27 @@ end
 -- or Pin mode is on. The game's item buttons are never touched, so using, equipping and
 -- dragging items stay untainted.
 local overlays = {}
-local function Wrap(btn)
+local function Wrap(btn, handler)
     local o = CreateFrame("Button", nil, btn)
     o:SetAllPoints(btn)
     o:SetFrameLevel((btn:GetFrameLevel() or 1) + 8)
     o:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    o:SetScript("OnClick", function(_, mouse) F.CellClick(btn.cell, mouse) end)
+    o:SetScript("OnClick", function(_, mouse)
+        if handler then handler(btn.cell, mouse, btn) return end
+        -- Ctrl+Alt+click with the bank open: send this stack to the bank (add Shift for every stack of it)
+        if _G.IsControlKeyDown and _G.IsControlKeyDown() and B.BankDeposit and B.BankUI and B.BankUI.IsOpen and B.BankUI.IsOpen() then
+            B.BankDeposit(btn.bag, btn.slot, _G.IsShiftKeyDown and _G.IsShiftKeyDown())
+            return
+        end
+        F.CellClick(btn.cell, mouse)
+    end)
     o:Hide()
     o.owner = btn
     btn.overlay = o
     overlays[#overlays + 1] = o
 end
+
+F.Wrap = Wrap
 
 function F.UpdateOverlays()
     if InCombat() then return end
@@ -554,10 +564,8 @@ local function GetButton(bag, slot)
     return btn
 end
 
-local function GetGhost(c)
-    local g = ghosts[c]
-    if g then return g end
-    g = CreateFrame("Button", "BaggieGhost" .. c, win)
+local function NewGhost(parent, name, onClick)
+    local g = CreateFrame("Button", name, parent)
     g:SetSize(CELL, CELL)
     g.bg = g:CreateTexture(nil, "BACKGROUND")
     g.bg:SetAllPoints(g)
@@ -582,7 +590,24 @@ local function GetGhost(c)
     g.pickGlow:SetAllPoints(g)
     g.pickGlow:Hide()
     g:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    g:SetScript("OnClick", function(self, mouse)
+    g:SetScript("OnClick", onClick)
+    g:SetScript("OnEnter", function(self)
+        if not _G.GameTooltip then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(self.name or "Saved spot", GOLD[1], GOLD[2], GOLD[3])
+        GameTooltip:AddLine("Saved spot. Drop one here and it sits here.", 1, 1, 1, true)
+        GameTooltip:AddLine("Alt+click to free this spot.", 0.7, 0.7, 0.7, true)
+        GameTooltip:Show()
+    end)
+    g:SetScript("OnLeave", function() if _G.GameTooltip then GameTooltip:Hide() end end)
+    return g
+end
+F.NewGhost = NewGhost
+
+local function GetGhost(c)
+    local g = ghosts[c]
+    if g then return g end
+    g = NewGhost(win, "BaggieGhost" .. c, function(self, mouse)
         if editMode or (_G.IsAltKeyDown and _G.IsAltKeyDown()) then
             F.CellClick(self.cell, mouse)
         elseif mouse == "LeftButton" and _G.CursorHasItem and _G.CursorHasItem() then
@@ -595,15 +620,6 @@ local function GetGhost(c)
             F.CellClick(self.cell, mouse)
         end
     end)
-    g:SetScript("OnEnter", function(self)
-        if not _G.GameTooltip then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(self.name or "Saved spot", GOLD[1], GOLD[2], GOLD[3])
-        GameTooltip:AddLine("Saved spot. Drop one here and it sits here.", 1, 1, 1, true)
-        GameTooltip:AddLine("Alt+click to free this spot.", 0.7, 0.7, 0.7, true)
-        GameTooltip:Show()
-    end)
-    g:SetScript("OnLeave", function() if _G.GameTooltip then GameTooltip:Hide() end end)
     ghosts[c] = g
     return g
 end
@@ -1271,6 +1287,7 @@ function F.Debug()
 end
 
 F.Decorate, F.UpdateButton, F.QualityColor = Decorate, UpdateButton, QualityColor
+F.PinCue = PinCue
 
 function F.Open()
     if not win then return end
@@ -1393,7 +1410,9 @@ B.On("BANKFRAME_CLOSED", B.Safe("bankx", function() Leave(false) end))
 B.On("AUCTION_HOUSE_SHOW", B.Safe("ah", function() Arrive(false) end))
 B.On("AUCTION_HOUSE_CLOSED", B.Safe("ahx", function() Leave(false) end))
 
-B.On("MODIFIER_STATE_CHANGED", B.Safe("mod", function() if win and win:IsShown() then F.UpdateOverlays() end end))
+B.On("MODIFIER_STATE_CHANGED", B.Safe("mod", function()
+    if (win and win:IsShown()) or (B.BankUI and B.BankUI.IsOpen and B.BankUI.IsOpen()) then F.UpdateOverlays() end
+end))
 B.On("ADDON_ACTION_BLOCKED", function(addon, func)
     if addon == ADDON_NAME and B.db then
         B.db.blocked = B.db.blocked or {}

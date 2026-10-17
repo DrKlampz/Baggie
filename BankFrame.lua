@@ -171,13 +171,93 @@ local function BankButton(bag, slot)
     btn = made
     btn:SetID(slot)
     btn:SetSize(cell, cell)
-    btn.bag, btn.slot, btn.noPins = bag, slot, true
+    btn.bag, btn.slot, btn.isBank = bag, slot, true
     F.Decorate(btn)
+    if F.Wrap then F.Wrap(btn, function(c, mouse) BU.CellClick(c, mouse) end) end
     bankBtns[key] = btn
     return btn
 end
 
+local bankSlots, bankCells, bankGhosts = {}, {}, {}
 local BankRefresh
+
+local function ItemNameOf(link)
+    return type(link) == "string" and link:match("%[(.-)%]") or nil
+end
+
+-- saved spots in the bank, same gestures as your bags (Alt+click)
+local function BankContentAt(c)
+    local x = bankCells[c]
+    if not x then return nil end
+    if x.kind == "ghost" then return x.itemID, "ghost" end
+    local s = bankSlots[x.index]
+    return s and s.itemID, "slot", s
+end
+
+local function BankPinnedAt(c)
+    for id, p in pairs(B.BankPins()) do
+        if B.Layout.HasCell(p, c) then return id end
+    end
+end
+
+function BU.CellClick(c, mouse)
+    if not c then return end
+    local pins = B.BankPins()
+    local id, kind, s = BankContentAt(c)
+    if mouse == "RightButton" then
+        local held = BankPinnedAt(c)
+        if held then
+            local name = pins[held].name or "item"
+            B.Layout.RemoveSpot(pins, held, c)
+            B.Print("freed the saved spot for " .. name)
+            BankRefresh()
+        end
+        return
+    end
+    if not id then B.Print("Alt+click an item to save it to the spot it is in.") return end
+    if kind == "ghost" or (pins[id] and B.Layout.HasCell(pins[id], c)) then
+        local name = pins[id] and pins[id].name or "item"
+        B.Layout.RemoveSpot(pins, id, c)
+        B.Print("freed the saved spot for " .. name)
+        BankRefresh()
+        return
+    end
+    local holder = BankPinnedAt(c)
+    if holder and holder ~= id then
+        B.Print("that spot is saved for " .. (pins[holder].name or "another item") .. ". Alt+click its empty spot to free it first.")
+        return
+    end
+    local icon, name
+    if s then
+        local tex, _, _, _, link = B.SlotInfo(s.bag, s.slot)
+        icon, name = tex, ItemNameOf(link)
+    end
+    B.Layout.AddSpot(pins, id, c)
+    if icon then pins[id].icon = icon end
+    if name then pins[id].name = name end
+    local n = #B.Layout.CellsOf(pins[id])
+    B.Print("saved " .. (name or "item") .. " to this bank spot" .. (n > 1 and (" (" .. n .. " spots now)") or ""))
+    BankRefresh()
+end
+
+local function BankGhost(c)
+    local g = bankGhosts[c]
+    if g then return g end
+    g = F.NewGhost(bw, "BaggieBankGhost" .. c, function(self, mouse)
+        if _G.IsAltKeyDown and _G.IsAltKeyDown() or mouse == "RightButton" then
+            BU.CellClick(self.cell, mouse)
+        elseif mouse == "LeftButton" and _G.CursorHasItem and _G.CursorHasItem() then
+            for _, s in ipairs(bankSlots) do
+                if not s.itemID then B.Pickup(s.bag, s.slot) return end
+            end
+            B.Print("no free bank slot")
+        end
+    end)
+    if F.Wrap then F.Wrap(g, function(cc, mouse) BU.CellClick(cc, mouse) end) end
+    bankGhosts[c] = g
+    return g
+end
+
 local function BankRefreshRaw()
     if not (bw and bw:IsShown() and B.db) then return end
     local cell, _, pad = CellMetrics()
@@ -189,67 +269,62 @@ local function BankRefreshRaw()
     local text = (bw.search:GetText() or ""):lower()
     local used, total = 0, 0
     local live = {}
-    local col, row, secExtra = 0, 0, 0
-    local compact = B.db.bankCompact ~= false
-    local list, tail = {}, {}
-    local function place(btn, bag, slot)
-        live[btn] = true
-        btn:SetSize(cell, cell)
-        btn:ClearAllPoints()
-        btn:SetPoint("TOPLEFT", bw, "TOPLEFT", pad + col * (cell + gap), -(62 + row * (cell + gap) + secExtra))
-        btn:Show()
-        F.UpdateButton(btn, text)
-        col = col + 1
-        if col >= cols then col, row = 0, row + 1 end
-    end
-    if compact then
-        -- everything packs to the top: filled slots first, then the empty ones; reagent bags go last
-        local filled, empty, reagent = {}, {}, {}
-        for _, bag in ipairs(BankBagIDs()) do
-            local num = B.NumSlots(bag)
-            local isReagent = false
-            if bag > 0 and _G.C_Container and _G.C_Container.GetContainerNumFreeSlots then
-                local ok, _, fam = pcall(_G.C_Container.GetContainerNumFreeSlots, bag)
-                if ok and type(fam) == "number" and fam ~= 0 and bit and bit.band(fam, 0x20) ~= 0 then isReagent = true end
-            end
-            for slot = 1, num do
-                local _, _, _, _, link = B.SlotInfo(bag, slot)
-                total = total + 1
-                if link then used = used + 1 end
-                local e = { bag = bag, slot = slot }
-                if isReagent then reagent[#reagent + 1] = e
-                elseif link then filled[#filled + 1] = e else empty[#empty + 1] = e end
-            end
-        end
-        for _, e in ipairs(filled) do place(BankButton(e.bag, e.slot), e.bag, e.slot) end
-        for _, e in ipairs(empty) do place(BankButton(e.bag, e.slot), e.bag, e.slot) end
-        if #reagent > 0 then
-            if col ~= 0 then col, row = 0, row + 1 end
-            secExtra = secExtra + 8
-            for _, e in ipairs(reagent) do place(BankButton(e.bag, e.slot), e.bag, e.slot) end
-        end
-    else
-    local first = true
+    -- the same rules as your bags: slots stay in game order, only saved spots move things, and a new item
+    -- shows up in the first free cell
+    local slots = {}
     for _, bag in ipairs(BankBagIDs()) do
-        local num = B.NumSlots(bag)
-        if num > 0 then
-            if not first and B.db.bankSections ~= false then
-                if col ~= 0 then col, row = 0, row + 1 end
-                secExtra = secExtra + 8
-            end
-            first = false
-            for slot = 1, num do
-                local btn = BankButton(bag, slot)
-                place(btn, bag, slot)
-                local _, _, _, _, link = B.SlotInfo(bag, slot)
-                total = total + 1
-                if link then used = used + 1 end
-            end
+        for slot = 1, B.NumSlots(bag) do
+            local _, _, _, _, link, id = B.SlotInfo(bag, slot)
+            slots[#slots + 1] = { bag = bag, slot = slot, itemID = link and (id or tonumber(tostring(link):match("item:(%d+)"))) or nil }
+            total = total + 1
+            if link then used = used + 1 end
         end
     end
+    bankSlots = slots
+    B.bankGapState = B.bankGapState or {}
+    local now = _G.GetTime and _G.GetTime() or 0
+    if _G.GetCursorInfo and _G.GetCursorInfo() then B.lastBankCursor = now end
+    local allowMove = not (B.lastBankCursor and now - B.lastBankCursor < 1.5)
+    local pins = B.BankPins()
+    local cells, count = B.Layout.Build(slots, pins, B.db.layout, B.bankGapState, allowMove)
+    bankCells = cells
+    for _, g in pairs(bankGhosts) do g.cell = nil g:Hide() end
+    local function pos(c)
+        local col, row = (c - 1) % cols, math.floor((c - 1) / cols)
+        return pad + col * (cell + gap), -(62 + row * (cell + gap))
     end
+    for c = 1, count do
+        local x = cells[c]
+        local px, py = pos(c)
+        if x and x.kind == "slot" then
+            local s = slots[x.index]
+            local btn = BankButton(s.bag, s.slot)
+            live[btn] = true
+            btn.cell = c
+            btn:SetSize(cell, cell)
+            btn:ClearAllPoints()
+            btn:SetPoint("TOPLEFT", bw, "TOPLEFT", px, py)
+            btn:Show()
+            F.UpdateButton(btn, text)
+        elseif x and x.kind == "ghost" then
+            local g = BankGhost(c)
+            local p = pins[x.itemID] or {}
+            g.cell = c
+            g:SetSize(cell, cell)
+            g.icon:SetAlpha(tonumber(B.db.ghostAlpha) or 0.35)
+            g.name = p.name
+            g.icon:SetTexture(p.icon)
+            g.pickGlow:Hide()
+            if F.PinCue then F.PinCue(g, B.db.showPinMark and true or false) end
+            g:ClearAllPoints()
+            g:SetPoint("TOPLEFT", bw, "TOPLEFT", px, py)
+            g:Show()
+        end
+    end
+    for _, btn in pairs(bankBtns) do if not live[btn] then btn.cell = nil end end
+    local row, secExtra = math.ceil(count / cols), 0
     for _, btn in pairs(bankBtns) do if not live[btn] then btn:Hide() end end
-    local rows = row + (col > 0 and 1 or 0)
+    local rows = row
     bw:SetSize(pad * 2 + cols * cell + (cols - 1) * gap, 62 + rows * (cell + gap) + secExtra + (B.db.bankShowBags ~= false and 44 or 30))
     local cm = B.db.counterMode
     if cm == "free" then bw.free:SetText(("%d free of %d"):format(total - used, total))
@@ -323,10 +398,34 @@ local function BankCreate()
         bagSlotBtns[i] = b
     end
     bw.sort = Button(bw, "Sort", 46, function()
-        local ok, err = pcall(B.SortBags, { ids = BankBagIDs(), noPins = true, refresh = SoonBank })
+        local ok, err = pcall(B.SortBags, { ids = BankBagIDs(), pins = B.BankPins(), refresh = SoonBank })
         if not ok then B.Say("sort error: " .. tostring(err)) end
     end)
     bw.sort:SetPoint("TOPLEFT", bw, "TOPLEFT", 12, -33)
+    -- quick deposit: send a whole kind of item from your bags to the bank (items with a saved spot in your bags stay)
+    local QUICK = {
+        { "Goods", "Trade goods: cloth, leather, ore, herbs and the like", function(_, c) return c == 7 end },
+        { "Potions", "Consumables: potions, food, scrolls", function(_, c) return c == 0 end },
+        { "Gear", "Weapons and armor", function(_, c) return c == 2 or c == 4 end },
+        { "Recipes", "Recipes and books", function(_, c) return c == 9 end },
+        { "All", "Everything except quest items and items saved to a spot in your bags", function(_, c) return c ~= 12 end },
+    }
+    bw.quick = {}
+    local qx = 12 + 46 + 8
+    for _, q in ipairs(QUICK) do
+        local btn = Button(bw, q[1], 52, function() B.BankDepositWhere(q[3]) end)
+        btn:SetPoint("TOPLEFT", bw, "TOPLEFT", qx, -33)
+        qx = qx + 54
+        btn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine("Deposit: " .. q[1], 1, 1, 1)
+            GameTooltip:AddLine(q[2], 0.8, 0.8, 0.8, true)
+            GameTooltip:AddLine("Ctrl+Alt+click an item in your bags to send just that stack (add Shift for every stack of it).", 0.6, 0.6, 0.6, true)
+            GameTooltip:Show()
+        end)
+        btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        bw.quick[#bw.quick + 1] = btn
+    end
     bw.buy = Button(bw, "Buy bag slot", 90, function()
         if _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
     end)
@@ -908,6 +1007,7 @@ function B.BankDebug()
 end
 
 function BU.IsOpen() return bankOpen end
+function BU.BagIDs() return BankBagIDs() end
 
 function BU.ApplyLook()
     if not B.db then return end
