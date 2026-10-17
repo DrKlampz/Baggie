@@ -102,73 +102,63 @@ function L.BuildCompact(slots, pins)
     return cells, count
 end
 
--- Real bag order (the default): every slot stays exactly where the game has it. The only
--- things that move are the items you saved to a spot. A saved item swaps places with
--- whatever sat in its cell; a saved spot with no item reserves its cell, and the slot it
--- covered moves into the cell of an empty slot (or is simply not drawn if it is empty).
+-- Real bag order (the default): the slots keep the order the game has them in, and the only things
+-- that move are the items you saved to a spot. A saved item sits in its saved cell (a saved spot with
+-- no item reserves its cell); every other slot fills the remaining cells in plain bag order. So a new
+-- item always shows up in the first free cell, never somewhere else, and nothing else is rearranged.
+-- When reserved cells leave too little room, empty slots at the end are the ones not drawn.
 function L.BuildReal(slots, pins)
     local n = #slots
     pins = pins or {}
     local order = {}
     for itemID, p in pairs(pins) do
-        for _, c in ipairs(L.CellsOf(p)) do
-            if c <= n then order[#order + 1] = { id = itemID, cell = c } end
-        end
+        for _, c in ipairs(L.CellsOf(p)) do order[#order + 1] = { id = itemID, cell = c } end
     end
     table.sort(order, function(a, b)
         if a.cell ~= b.cell then return a.cell < b.cell end
         return tostring(a.id) < tostring(b.id)
     end)
-    local seen, valid, pinnedCell = {}, {}, {}
+    local seen, valid = {}, {}
     for _, p in ipairs(order) do
-        if not seen[p.cell] then seen[p.cell] = true valid[#valid + 1] = p pinnedCell[p.cell] = true end
+        if not seen[p.cell] then seen[p.cell] = true valid[#valid + 1] = p end
     end
 
-    local cells = {}                     -- cells[c] = { kind="slot", index=i } | { kind="ghost", itemID=id }
-    local where = {}                     -- slot index -> cell currently holding it
-    for i = 1, n do cells[i] = { kind = "slot", index = i } where[i] = i end
-
-    local placedSlot = {}                -- slot index fixed in its pinned cell
-    local ghosts = {}
+    local used, placed = {}, {}
+    local maxPin = 0
     for _, p in ipairs(valid) do
+        if p.cell > maxPin then maxPin = p.cell end
         local found
         for i = 1, n do
-            if slots[i].itemID == p.id and not placedSlot[i] then found = i break end
+            if not used[i] and slots[i].itemID == p.id then found = i break end
         end
         if found then
-            local from = where[found]
-            if from ~= p.cell then
-                local a, b = cells[from], cells[p.cell]
-                -- plain swap: whatever sat in the saved cell takes the cell the item came from.
-                -- (Never bump it elsewhere: dropping an item on that cell would then jump away.)
-                cells[from], cells[p.cell] = b, a
-                if a.kind == "slot" then where[a.index] = p.cell end
-                if b.kind == "slot" then where[b.index] = from end
-            end
-            placedSlot[found] = true
+            used[found] = true
+            placed[p.cell] = { kind = "slot", index = found }
         else
-            ghosts[#ghosts + 1] = p
+            placed[p.cell] = { kind = "ghost", itemID = p.id }
         end
     end
 
-    local extra = {}
-    for _, p in ipairs(ghosts) do
-        local x = cells[p.cell]
-        cells[p.cell] = { kind = "ghost", itemID = p.id }
-        if x.kind == "slot" and slots[x.index].itemID then
-            -- an item lost its cell: take the cell of an empty slot, counting from the end
-            local took
-            for c = n, 1, -1 do
-                local y = cells[c]
-                if y.kind == "slot" and not slots[y.index].itemID and not pinnedCell[c] then
-                    cells[c] = x where[x.index] = c took = true break
-                end
-            end
-            if not took then extra[#extra + 1] = x end
-        end
+    local rest = {}
+    for i = 1, n do if not used[i] then rest[#rest + 1] = i end end
+    local total = math.max(n, maxPin)
+    local free = total - #valid
+    -- not enough room: leave out empty slots from the back first
+    local k = #rest
+    while #rest > free and k >= 1 do
+        if not slots[rest[k]].itemID then table.remove(rest, k) end
+        k = k - 1
     end
-    local count = n
-    for _, x in ipairs(extra) do count = count + 1 cells[count] = x end
+    if #rest > free then total = total + (#rest - free) end
+
+    local cells, ri = {}, 1
+    for c = 1, total do
+        if placed[c] then cells[c] = placed[c]
+        elseif ri <= #rest then cells[c] = { kind = "slot", index = rest[ri] } ri = ri + 1 end
+    end
+    local count = total
+    while count > 0 and cells[count] == nil do count = count - 1 end
+    if count < maxPin then count = maxPin end
     return cells, count
 end
 

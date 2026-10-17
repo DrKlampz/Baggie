@@ -272,7 +272,9 @@ local function UpdateButton(btn, text)
     do
         local okP, errP = pcall(function()
             local pinsNow = B.Pins()
-            PinCue(btn, not btn.noPins and B.db.showPinMark and id ~= nil and pinsNow[id] ~= nil)
+            -- only the stack that sits in its saved cell gets the mark, not every stack of the same item
+            local mark = pinsNow[id] ~= nil and btn.cell ~= nil and B.Layout.HasCell(pinsNow[id], btn.cell)
+            PinCue(btn, not btn.noPins and B.db.showPinMark and id ~= nil and mark and true or false)
         end)
         if not okP and not B.pinErrShown then B.pinErrShown = true B.Print("saved-spot mark failed: " .. tostring(errP)) end
     end
