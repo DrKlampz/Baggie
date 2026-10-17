@@ -69,7 +69,12 @@ B.DEFAULTS = {
     pinSize = 7,
     showMinimap = true,     -- minimap button: click = bags, right-click = options
     minimapAngle = 200,
-    glowQuest = true,    -- quest items (and items that start a quest) glow gold
+    glowQuest = true,    -- quest items glow
+    glowQuestColor = { 1, 0.82, 0.1 },
+    glowStarts = true,   -- items that start a quest glow
+    glowStartsColor = { 1, 0.95, 0.4 },
+    glowMisc = false,    -- things the game files as quest items but that are really currencies (Blood Shard and the like)
+    glowMiscColor = { 0.4, 0.8, 1 },
     glowQuality = false, -- glow items of high quality
     glowMinQuality = 4,  -- ... from this quality up (4 = epic)
     glowNew = false,     -- items that just arrived glow until you point at them
@@ -116,7 +121,7 @@ end
 B.LOOK = {}
 for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize flair pulse showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
-    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuality glowMinQuality glowStrength junkDim ilvl " ..
+    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength junkDim ilvl " ..
     "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
 B.LAYOUT = { cellSize = true, gap = true, padding = true, bankCols = true }
 
@@ -207,6 +212,60 @@ end
 B.ItemID = ItemID
 
 -- texture, count, locked, quality, link, itemID
+-- The game files some ordinary items (a currency like Blood Shard) under the quest item class. Those should not
+-- glow like real quest items: an item counts when no vendor buys it, or when a quest in your log asks for it.
+local questNeeds, questNeedsAt = {}, -1
+local function RefreshQuestNeeds()
+    local now = _G.GetTime and _G.GetTime() or 0
+    if now - questNeedsAt < 1 then return end
+    questNeedsAt = now
+    wipe(questNeeds)
+    local GetN = _G.GetNumQuestLogEntries
+    local Lead, NumObj = _G.GetQuestLogLeaderBoard, _G.GetNumQuestLeaderBoards
+    if not (GetN and Lead and NumObj) then return end
+    local okN, n = pcall(GetN)
+    if not okN then return end
+    for q = 1, tonumber(n) or 0 do
+        local okC, cnt = pcall(NumObj, q)
+        for o = 1, okC and tonumber(cnt) or 0 do
+            local ok, text, kind = pcall(Lead, o, q)
+            if ok and type(text) == "string" and (kind == nil or kind == "item") then
+                questNeeds[#questNeeds + 1] = text:lower()
+            end
+        end
+    end
+end
+function B.QuestItemOK(id)
+    if not id then return true end
+    local sell, name
+    if _G.C_Item and _G.C_Item.GetItemInfo then
+        local ok, nm, _, _, _, _, _, _, _, _, _, price = pcall(_G.C_Item.GetItemInfo, id)
+        if ok then name, sell = nm, price end
+    elseif _G.GetItemInfo then
+        local nm, _, _, _, _, _, _, _, _, _, price = _G.GetItemInfo(id)
+        name, sell = nm, price
+    end
+    if not name then return true end            -- not loaded yet: keep the glow for now
+    if (tonumber(sell) or 0) == 0 then return true end
+    RefreshQuestNeeds()
+    local low = name:lower()
+    for _, t in ipairs(questNeeds) do
+        if t:find(low, 1, true) then return true end
+    end
+    return false
+end
+
+-- the glow color for a kind ("quest", "starts", "misc"), or nil when that kind is switched off
+function B.KindColor(kind)
+    local db = B.db
+    if not (db and kind) then return end
+    local key = kind == "quest" and "glowQuest" or kind == "starts" and "glowStarts" or kind == "misc" and "glowMisc"
+    if not key or not db[key] then return end
+    local c = db[key .. "Color"] or B.DEFAULTS and B.DEFAULTS[key .. "Color"]
+    if type(c) ~= "table" then c = { 1, 0.82, 0.1 } end
+    return c[1], c[2], c[3]
+end
+
 function B.SlotInfo(bag, slot)
     if C and C.GetContainerItemInfo then
         local i = C.GetContainerItemInfo(bag, slot)

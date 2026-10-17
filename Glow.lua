@@ -34,10 +34,8 @@ end
 local function Color(kind, quality)
     local db = B.db
     if not db then return end
-    if db.glowQuest then
-        if kind == "quest" then return 1, 0.82, 0.1 end
-        if kind == "starts" then return 1, 0.95, 0.4 end
-    end
+    local r, g, b = B.KindColor(kind)
+    if r then return r, g, b end
     if db.glowQuality and (quality or 0) >= (tonumber(db.glowMinQuality) or 4) then return QualityRGB(quality) end
 end
 
@@ -71,7 +69,8 @@ local function RefreshBank()
         local tex, _, _, quality, _, id = B.SlotInfo(-1, i)
         if tex then
             local kind = ContainerQuest(-1, i)
-            if not kind and ClassOf(id) == 12 then kind = "quest" end
+            if kind == "quest" and not B.QuestItemOK(id) then kind = "misc" end
+            if not kind and ClassOf(id) == 12 then kind = B.QuestItemOK(id) and "quest" or "misc" end
             Apply(btn, Color(kind, quality))
         else
             Apply(btn)
@@ -89,7 +88,8 @@ local function RefreshBank()
                 local tex, _, _, quality, _, id = B.SlotInfo(bag, slot)
                 if tex then
                     local kind = ContainerQuest(bag, slot)
-                    if not kind and ClassOf(id) == 12 then kind = "quest" end
+                    if kind == "quest" and not B.QuestItemOK(id) then kind = "misc" end
+            if not kind and ClassOf(id) == 12 then kind = B.QuestItemOK(id) and "quest" or "misc" end
                     Apply(btn, Color(kind, quality))
                 else
                     Apply(btn)
@@ -111,7 +111,7 @@ local function RefreshGuildBank()
             local ok, tex, _, _, _, quality = pcall(_G.GetGuildBankItemInfo, tab, slot)
             if ok and tex then
                 local link = _G.GetGuildBankItemLink and _G.GetGuildBankItemLink(tab, slot)
-                local kind = (ClassOf(link) == 12) and "quest" or nil
+                local kind = (ClassOf(link) == 12) and (B.QuestItemOK(link) and "quest" or "misc") or nil
                 Apply(btn, Color(kind, quality))
             else
                 Apply(btn)

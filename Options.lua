@@ -127,7 +127,12 @@ local SECTIONS = {
         { key = "borderMinQuality", kind = "slider", label = "Quality borders start at (2 = green)", min = 0, max = 5, step = 1 },
     } },
     { id = "glows", title = "Item glows", scope = "all", rows = {
-        { key = "glowQuest", kind = "check", label = "Glow quest items (gold)" },
+        { key = "glowQuest", kind = "check", label = "Glow quest items" },
+        { key = "glowQuestColor", kind = "color", label = "   Quest item color" },
+        { key = "glowStarts", kind = "check", label = "Glow items that start a quest" },
+        { key = "glowStartsColor", kind = "color", label = "   Quest starter color" },
+        { key = "glowMisc", kind = "check", label = "Glow currencies and other quest-class items (Blood Shard...)" },
+        { key = "glowMiscColor", kind = "color", label = "   Currency color" },
         { key = "glowQuality", kind = "check", label = "Glow high-quality items" },
         { key = "glowMinQuality", kind = "slider", label = "Quality glows start at (4 = epic)", min = 2, max = 6, step = 1 },
         { key = "glowStrength", kind = "slider", label = "Glow brightness", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },

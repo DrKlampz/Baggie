@@ -153,12 +153,12 @@ local function QuestKind(btn, id)
             if type(a) == "table" then isQuest, questID, active = a.isQuestItem, a.questID, a.isActive
             else isQuest, questID, active = a, b, c end
             if questID and questID > 0 and not active then return "starts" end
-            if isQuest then return "quest" end
+            if isQuest then return B.QuestItemOK(id) and "quest" or "misc" end
         end
     end
     if id and _G.C_Item and _G.C_Item.GetItemInfoInstant then
         local ok, _, _, _, _, _, classID = pcall(_G.C_Item.GetItemInfoInstant, id)
-        if ok and classID == 12 then return "quest" end
+        if ok and classID == 12 then return B.QuestItemOK(id) and "quest" or "misc" end
     end
 end
 
@@ -190,11 +190,9 @@ end
 
 local function UpdateGlow(btn, tex, quality, id, count)
     local r, g, b
-    if tex and B.db.glowQuest then
+    if tex then
         local okK, kind = pcall(QuestKind, btn, id)
-        if not okK then kind = nil end
-        if kind == "quest" then r, g, b = 1, 0.82, 0.1
-        elseif kind == "starts" then r, g, b = 1, 0.95, 0.4 end
+        if okK and kind then r, g, b = B.KindColor(kind) end
     end
     if not r and tex and B.db.glowQuality and (quality or 0) >= (tonumber(B.db.glowMinQuality) or 4) then
         r, g, b = QualityColor(quality)
