@@ -262,7 +262,10 @@ function B.PlanSort(cur, fixed)
     for _, i in ipairs(avail) do isAvail[i] = true end
     local tgt, used = {}, {}
     local pinList = {}
-    for id, cell in pairs(fixed or {}) do pinList[#pinList + 1] = { id = id, cell = cell } end
+    for id, cell in pairs(fixed or {}) do
+        if type(cell) == "table" then for _, x in ipairs(cell) do pinList[#pinList + 1] = { id = id, cell = x } end
+        else pinList[#pinList + 1] = { id = id, cell = cell } end
+    end
     table.sort(pinList, function(x, y) if x.cell ~= y.cell then return x.cell < y.cell end return tostring(x.id) < tostring(y.id) end)
     for _, p in ipairs(pinList) do
         if isAvail[p.cell] and not tgt[p.cell] then
@@ -460,7 +463,8 @@ function B.SortBags(opt)
         local fixed = {}
         if not opt.noPins then
             for id, p in pairs(B.Pins()) do
-                if type(p) == "table" and type(p.cell) == "number" then fixed[id] = math.floor(p.cell) end
+                local cs = B.Layout.CellsOf(p)
+                if #cs > 0 then fixed[id] = cs end
             end
         end
         local moves = B.PlanSort(cur, fixed)
@@ -679,7 +683,8 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
     elseif cmd == "pins" or cmd == "list" then
         local n = 0
         for id, p in pairs(B.Pins()) do
-            n = n + 1 B.Print(("cell %d: %s (%d)"):format(p.cell or 0, p.name or "item", id))
+            n = n + 1
+            B.Print(("cell %s: %s (%d)"):format(table.concat(B.Layout.CellsOf(p), ", "), p.name or "item", id))
         end
         if n == 0 then B.Print("no saved spots yet. Alt+click an item to save its spot.") end
     elseif cmd == "debug" then

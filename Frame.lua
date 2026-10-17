@@ -326,7 +326,7 @@ end
 
 local function PinnedItemAtCell(c)
     for id, p in pairs(B.Pins()) do
-        if p.cell == c then return id end
+        if B.Layout.HasCell(p, c) then return id end
     end
 end
 
@@ -338,7 +338,7 @@ function F.CellClick(c, mouse)
         local held = PinnedItemAtCell(c)
         if held then
             local name = pins[held].name or "item"
-            B.ClearPin(held)
+            B.Layout.RemoveSpot(pins, held, c)
             B.Print("freed the saved spot for " .. name)
             F.Refresh()
         end
@@ -346,9 +346,9 @@ function F.CellClick(c, mouse)
     end
     -- left click: save the item that is in this spot, to this spot (click again to free it)
     if not id then B.Print("Alt+click an item to save it to the spot it is in.") return end
-    if kind == "ghost" or (pins[id] and pins[id].cell == c) then
+    if kind == "ghost" or (pins[id] and B.Layout.HasCell(pins[id], c)) then
         local name = pins[id] and pins[id].name or "item"
-        B.ClearPin(id)
+        B.Layout.RemoveSpot(pins, id, c)
         B.Print("freed the saved spot for " .. name)
         F.Refresh()
         return
@@ -365,10 +365,12 @@ function F.CellClick(c, mouse)
         B.Print("that spot is saved for " .. (pins[holder].name or "another item") .. ". Alt+click its empty spot to free it first.")
         return
     end
-    B.Layout.Place(pins, id, c)
+    -- an item that already has a spot gets this one as well (free the old one first to move it)
+    B.Layout.AddSpot(pins, id, c)
     if icon then pins[id].icon = icon end
     if name then pins[id].name = name end
-    B.Print("saved " .. (name or "item") .. " to this spot")
+    local nSpots = #B.Layout.CellsOf(pins[id])
+    B.Print("saved " .. (name or "item") .. " to this spot" .. (nSpots > 1 and (" (" .. nSpots .. " spots now)") or ""))
     F.Refresh()
 end
 

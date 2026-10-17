@@ -12,15 +12,30 @@ local L = B.Layout
 --            = { kind = "ghost", itemID = id }         a reserved, empty saved spot
 -- The window has at least as many cells as real slots. It grows by whole cells only
 -- when saved spots would otherwise push a real item out of the window.
+-- every cell an item type is saved to: p.cell is the first, p.also lists any more
+function L.CellsOf(p)
+    local out = {}
+    if type(p) ~= "table" then return out end
+    if type(p.cell) == "number" and p.cell >= 1 then out[1] = math.floor(p.cell) end
+    if type(p.also) == "table" then
+        for _, c in ipairs(p.also) do
+            if type(c) == "number" and c >= 1 then out[#out + 1] = math.floor(c) end
+        end
+    end
+    return out
+end
+function L.HasCell(p, c)
+    for _, x in ipairs(L.CellsOf(p)) do if x == c then return true end end
+    return false
+end
+
 function L.BuildCompact(slots, pins)
     local n = #slots
     pins = pins or {}
 
     local order = {}
     for itemID, p in pairs(pins) do
-        if type(p) == "table" and type(p.cell) == "number" and p.cell >= 1 then
-            order[#order + 1] = { id = itemID, cell = math.floor(p.cell) }
-        end
+        for _, c in ipairs(L.CellsOf(p)) do order[#order + 1] = { id = itemID, cell = c } end
     end
     table.sort(order, function(a, b)
         if a.cell ~= b.cell then return a.cell < b.cell end
@@ -96,8 +111,8 @@ function L.BuildReal(slots, pins)
     pins = pins or {}
     local order = {}
     for itemID, p in pairs(pins) do
-        if type(p) == "table" and type(p.cell) == "number" and p.cell >= 1 and p.cell <= n then
-            order[#order + 1] = { id = itemID, cell = math.floor(p.cell) }
+        for _, c in ipairs(L.CellsOf(p)) do
+            if c <= n then order[#order + 1] = { id = itemID, cell = c } end
         end
     end
     table.sort(order, function(a, b)
@@ -238,13 +253,45 @@ function L.Place(pins, itemID, target, from)
     local old = (pins[itemID] and pins[itemID].cell) or from
     local other
     for id, p in pairs(pins) do
-        if id ~= itemID and p.cell == target then other = id end
+        if id ~= itemID and L.HasCell(p, target) then other = id end
     end
     local freed
     if other then
-        if old then pins[other].cell = old else pins[other] = nil freed = other end
+        if old then
+            L.RemoveSpot(pins, other, target) L.AddSpot(pins, other, old)
+        else L.RemoveSpot(pins, other, target) freed = other end
     end
     pins[itemID] = pins[itemID] or {}
     pins[itemID].cell = target
+    pins[itemID].also = nil
     return other, freed
+end
+
+-- saves the item type to one more cell (it keeps the spots it already has). false if another item holds that cell.
+function L.AddSpot(pins, itemID, cell)
+    for id, p in pairs(pins) do
+        if id ~= itemID and L.HasCell(p, cell) then return false end
+    end
+    local p = pins[itemID]
+    if not p then pins[itemID] = { cell = cell } return true end
+    if L.HasCell(p, cell) then return true end
+    if type(p.cell) ~= "number" then p.cell = cell return true end
+    p.also = p.also or {}
+    p.also[#p.also + 1] = cell
+    return true
+end
+
+-- frees one saved cell of an item type; the type is forgotten when it has none left. Returns spots left.
+function L.RemoveSpot(pins, itemID, cell)
+    local p = pins[itemID]
+    if not p then return 0 end
+    local keep = {}
+    for _, c in ipairs(L.CellsOf(p)) do if c ~= cell then keep[#keep + 1] = c end end
+    if #keep == 0 then pins[itemID] = nil return 0 end
+    p.cell = keep[1]
+    if #keep > 1 then
+        p.also = {}
+        for i = 2, #keep do p.also[#p.also + 1] = keep[i] end
+    else p.also = nil end
+    return #keep
 end
