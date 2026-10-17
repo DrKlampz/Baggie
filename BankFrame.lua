@@ -365,7 +365,17 @@ local function BankCreate()
     Place(bw, "bankPoint", 40)
     bw:SetScript("OnShow", function() BankRefresh() end)
     bw:SetScript("OnHide", function()
-        if bankOpen and _G.CloseBankFrame then pcall(_G.CloseBankFrame) end
+        if bankOpen then
+            -- tell the game the banker conversation is over; the tabbed bank ends it through the interaction manager
+            if _G.CloseBankFrame then pcall(_G.CloseBankFrame) end
+            if _G.C_Bank and _G.C_Bank.CloseBankFrame then pcall(_G.C_Bank.CloseBankFrame) end
+            local PM, PT = _G.C_PlayerInteractionManager, _G.Enum and _G.Enum.PlayerInteractionType
+            if PM and PM.ClearInteraction and PT then
+                for _, k in ipairs({ PT.Banker, PT.CharacterBanker, PT.AccountBanker }) do
+                    if k then pcall(PM.ClearInteraction, k) end
+                end
+            end
+        end
         bankOpen = false
     end)
     bw.search:SetScript("OnTextChanged", function() BankRefresh() end)
