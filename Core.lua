@@ -871,6 +871,10 @@ SlashCmdList["BAGGIE"] = B.Safe("slash", function(msg)
         for k in pairs(B.Pins()) do B.Pins()[k] = nil end
         for k in pairs(B.BankPins()) do B.BankPins()[k] = nil end
         refresh() B.Print("all saved spots cleared")
+    elseif cmd == "toss" then
+        if rest == "list" then B.Toss.List()
+        elseif rest == "clear" then for k in pairs(B.Toss.Marks()) do B.Toss.Marks()[k] = nil end refresh() B.Print("cleared all quest item marks")
+        else B.Toss.Run() end
     elseif cmd == "pins" or cmd == "list" then
         local n = 0
         for id, p in pairs(B.Pins()) do

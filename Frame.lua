@@ -266,6 +266,25 @@ local function UpdateButton(btn, text)
 
     UpdateGlow(btn, tex, quality, id, count)
 
+    -- quest item cleanup: a small red cross on items marked to be destroyed (yellow while a quest still needs one)
+    do
+        local show = tex and id and not btn.isBank and B.Toss and B.Toss.Marked(id)
+        if show then
+            local tm = btn.tossMark
+            if not tm then
+                tm = btn:CreateTexture(nil, "OVERLAY", nil, 7)
+                tm:SetTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Up")
+                tm:SetSize(14, 14)
+                tm:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 2, 2)
+                btn.tossMark = tm
+            end
+            if B.Toss.Need(id) == "free" then tm:SetVertexColor(1, 1, 1) else tm:SetVertexColor(1, 0.85, 0.1) end
+            tm:Show()
+        elseif btn.tossMark then
+            btn.tossMark:Hide()
+        end
+    end
+
     -- saved-spot cue first, so nothing later in this function can stop it from showing
     do
         local okP, errP = pcall(function()
@@ -388,6 +407,11 @@ local function Wrap(btn, handler)
         -- Ctrl+Alt+click with the bank open: send this stack to the bank (add Shift for every stack of it)
         if _G.IsControlKeyDown and _G.IsControlKeyDown() and B.BankDeposit and B.BankUI and B.BankUI.IsOpen and B.BankUI.IsOpen() then
             B.BankDeposit(btn.bag, btn.slot, _G.IsShiftKeyDown and _G.IsShiftKeyDown())
+            return
+        end
+        -- Shift+Alt+click on a quest item: mark it for the quest item cleanup (see Toss.lua)
+        if _G.IsShiftKeyDown and _G.IsShiftKeyDown() and not (_G.IsControlKeyDown and _G.IsControlKeyDown()) and B.Toss and btn.bag and btn.slot then
+            B.Toss.Toggle(btn.bag, btn.slot)
             return
         end
         F.CellClick(btn.cell, mouse)

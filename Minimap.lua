@@ -31,6 +31,7 @@ local function Tip(self)
     GameTooltip:AddLine("Click: open / close your bags", 1, 1, 1)
     GameTooltip:AddLine("Right-click: options", 1, 1, 1)
     GameTooltip:AddLine("Shift-click: your characters (delete old ones)", 1, 1, 1)
+    GameTooltip:AddLine("Alt-click: destroy the quest items you marked", 1, 1, 1)
     GameTooltip:AddLine("Drag: move around the minimap", 0.7, 0.7, 0.7)
     GameTooltip:Show()
 end
@@ -61,6 +62,7 @@ function MM.Create()
 
     btn:SetScript("OnClick", function(_, button)
         if IsShiftKeyDown() and B.Roster then B.Roster.Toggle() return end
+        if IsAltKeyDown() and B.Toss then B.Toss.Run() return end
         if button == "RightButton" then
             if B.Options then B.Options.Toggle() end
         elseif B.Frame then

@@ -13,6 +13,7 @@ Core.lua
 Roster.lua
 Layout.lua
 Frame.lua
+Toss.lua
 Glow.lua
 Minimap.lua
 Options.lua
