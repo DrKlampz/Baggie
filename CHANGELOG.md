@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
-- Quest item cleanup: Shift+Alt+click a quest item to mark it (small red cross), then Alt+click the minimap button or type /baggie toss to destroy the marked ones. Uses Questie to keep anything a quest in your log still wants; keeps everything if it can't be sure; checks again just before each item goes and asks you to confirm first.
+## v0.6.0
+- Quest item cleanup: Shift+Alt+click a quest item to mark it (small red cross), then Alt+click the minimap button or type /baggie toss to destroy the marked ones. Reads the game's own quest log and keeps anything a quest in it could want (Questie, if you have it, adds a second check); keeps everything if it can't read the log; checks again just before each item goes and asks you to confirm first.
 - Item glows: separate switch and color for quest items, quest starters and currencies (Blood Shard and the like no longer glow as quest items unless you turn that on).
+- Saved spots: one item can be saved to several spots, new items go to the first free cell, and the padlock shows only on the stack in its saved spot. The bank follows the same rules and has quick-deposit from your bags (Ctrl+Alt+click, or the Deposit menu).
 - Bank: one Deposit button with a menu instead of five buttons; Escape now properly ends the banker conversation; no phantom slots before a bank tab is bought, with a Buy tab button.
 - The gold and slot-count line at the bottom now sits on its own top layer, so nothing in the window can cover it.
 - New-item glow now only marks items that came into your bags from outside (loot, mail, bank, vendor, trade). Moving or swapping items inside the bags no longer lights them up.
