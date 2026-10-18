@@ -26,6 +26,7 @@ B.DEFAULTS = {
     footerSize = 11,
     junkDim = true,      -- dim grey items
     junkGray = true,     -- also take the color out of grey items
+    startMark = true,    -- a yellow ! in the middle of items that start a quest, until you accept the quest
     -- appearance
     bgStyle = "solid",      -- solid | dark | parchment | marble | rock | tooltip | leather | stone | linen | carbon | brushed | gradient | custom
     bgCustom = "",          -- texture path (or a SharedMedia background name) used when bgStyle is custom
@@ -124,7 +125,7 @@ end
 B.LOOK = {}
 for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize flair pulse showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
-    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength glowQualityStrength glowSize junkDim junkGray ilvl " ..
+    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength glowQualityStrength glowSize junkDim junkGray startMark ilvl " ..
     "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
 B.LAYOUT = { cellSize = true, gap = true, padding = true, bankCols = true }
 
@@ -267,6 +268,24 @@ function B.KindColor(kind)
     local c = db[key .. "Color"] or B.DEFAULTS and B.DEFAULTS[key .. "Color"]
     if type(c) ~= "table" then c = { 1, 0.82, 0.1 } end
     return c[1], c[2], c[3]
+end
+
+-- the yellow ! in the middle of an item that starts a quest; it goes away once the quest is accepted
+function B.StartMark(btn, on, cell)
+    local m = btn.baggieStartMark
+    if not (on and B.db and B.db.startMark) then
+        if m then m:Hide() end
+        return
+    end
+    if not m then
+        m = btn:CreateTexture(nil, "OVERLAY", nil, 7)
+        m:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
+        m:SetPoint("CENTER", btn, "CENTER", 0, 0)
+        btn.baggieStartMark = m
+    end
+    local w = tonumber(cell) or btn:GetWidth() or 37
+    m:SetSize(w * 0.6, w * 0.6)
+    m:Show()
 end
 
 function B.SlotInfo(bag, slot)

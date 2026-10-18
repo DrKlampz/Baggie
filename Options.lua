@@ -131,6 +131,7 @@ local SECTIONS = {
         { key = "glowQuest", kind = "check", label = "Glow quest items" },
         { key = "glowQuestColor", kind = "color", label = "   Quest item color" },
         { key = "glowStarts", kind = "check", label = "Glow items that start a quest" },
+        { key = "startMark", kind = "check", label = "Yellow ! in the middle of items that start a quest (until you accept it)" },
         { key = "glowStartsColor", kind = "color", label = "   Quest starter color" },
         { key = "glowMisc", kind = "check", label = "Glow currencies and other quest-class items (Blood Shard...)" },
         { key = "glowMiscColor", kind = "color", label = "   Currency color" },

@@ -83,9 +83,9 @@ local function RefreshBank()
             local kind = ContainerQuest(-1, i)
             if kind == "quest" and not B.QuestItemOK(id) then kind = "misc" end
             if not kind and ClassOf(id) == 12 then kind = B.QuestItemOK(id) and "quest" or "misc" end
-            Apply(btn, Color(kind, quality))
+            Apply(btn, Color(kind, quality)) B.StartMark(btn, kind == "starts")
         else
-            Apply(btn)
+            Apply(btn) B.StartMark(btn, false)
         end
     end
     -- bank bags, when they are shown as the game's own bag windows
@@ -102,9 +102,9 @@ local function RefreshBank()
                     local kind = ContainerQuest(bag, slot)
                     if kind == "quest" and not B.QuestItemOK(id) then kind = "misc" end
             if not kind and ClassOf(id) == 12 then kind = B.QuestItemOK(id) and "quest" or "misc" end
-                    Apply(btn, Color(kind, quality))
+                    Apply(btn, Color(kind, quality)) B.StartMark(btn, kind == "starts")
                 else
-                    Apply(btn)
+                    Apply(btn) B.StartMark(btn, false)
                 end
             end
         end
@@ -124,9 +124,9 @@ local function RefreshGuildBank()
             if ok and tex then
                 local link = _G.GetGuildBankItemLink and _G.GetGuildBankItemLink(tab, slot)
                 local kind = (ClassOf(link) == 12) and (B.QuestItemOK(link) and "quest" or "misc") or nil
-                Apply(btn, Color(kind, quality))
+                Apply(btn, Color(kind, quality)) B.StartMark(btn, kind == "starts")
             else
-                Apply(btn)
+                Apply(btn) B.StartMark(btn, false)
             end
         end
     end
@@ -175,6 +175,7 @@ function B.GlowButton(btn, kind, quality, cell, hasItem)
     if not g then return end
     local r, gg, b, isQuality
     if hasItem then r, gg, b, isQuality = Color(kind, quality) end
+    B.StartMark(btn, hasItem and kind == "starts", cell)
     if not r then g:Hide() return end
     local w = tonumber(cell) or btn:GetWidth() or 37
     local size, str = GlowLook(isQuality)

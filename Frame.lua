@@ -192,8 +192,10 @@ local function UpdateGlow(btn, tex, quality, id, count)
     btn.glowArgs = { tex, quality, id, count }   -- so mousing over can redraw the glow that is left once "new" is cleared
     local r, g, b
     local fromQuality = false
+    local startsQuest = false
     if tex then
         local okK, kind = pcall(QuestKind, btn, id)
+        startsQuest = okK and kind == "starts"
         if okK and kind then r, g, b = B.KindColor(kind) end
     end
     if not r and tex and B.db.glowQuality and (quality or 0) >= (tonumber(B.db.glowMinQuality) or 4) then
@@ -204,6 +206,7 @@ local function UpdateGlow(btn, tex, quality, id, count)
     local n = tonumber(count) or 1
     if tex and id and glowArmed and arrived[id] and (lastSeen[key] ~= id or n > (lastStack[key] or 0)) then btn.baggieNew = true end
     if not tex then btn.baggieNew = nil end
+    B.StartMark(btn, startsQuest, CELL)
     lastSeen[key] = tex and id or nil
     lastStack[key] = tex and n or nil
     if not r and tex and B.db.glowNew and btn.baggieNew then r, g, b = 0.4, 1, 0.6 end

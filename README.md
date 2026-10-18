@@ -22,7 +22,7 @@ Shift+Alt+click a quest item to mark it with a small red cross. Alt+click the mi
 
 ## Glows
 
-New items, quest items, quest starters and currencies each have their own glow switch and color under `/baggie options`. Currencies that the game files as quest items (Blood Shard and the like) only glow if you turn that on. New-item glow only marks items that came in from outside (loot, mail, bank, vendor, trade). Quality glows have their own brightness slider, and one more sets how far all the glows reach past the slot.
+New items, quest items, quest starters and currencies each have their own glow switch and color under `/baggie options`. Currencies that the game files as quest items (Blood Shard and the like) only glow if you turn that on. New-item glow only marks items that came in from outside (loot, mail, bank, vendor, trade). Items that start a quest also get a yellow ! in the middle of the slot until you accept the quest (optional). Quality glows have their own brightness slider, and one more sets how far all the glows reach past the slot.
 
 ## Also
 
