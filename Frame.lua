@@ -189,6 +189,7 @@ local function SnapshotArrivals(slots)
 end
 
 local function UpdateGlow(btn, tex, quality, id, count)
+    btn.glowArgs = { tex, quality, id, count }   -- so mousing over can redraw the glow that is left once "new" is cleared
     local r, g, b
     if tex then
         local okK, kind = pcall(QuestKind, btn, id)
@@ -536,7 +537,15 @@ local function Decorate(btn)
     btn.glow:SetPoint("CENTER", btn, "CENTER", 0, 0)
     btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
     btn.glow:Hide()
-    if btn.HookScript then btn:HookScript("OnEnter", function(self) if self.baggieNew then self.baggieNew = nil self.glow:Hide() end end) end
+    if btn.HookScript then
+        btn:HookScript("OnEnter", function(self)
+            if not self.baggieNew then return end
+            self.baggieNew = nil
+            -- the green new-item glow goes away, but a quest, starter, currency or quality glow underneath stays
+            local a = self.glowArgs
+            if a then UpdateGlow(self, a[1], a[2], a[3], a[4]) else self.glow:Hide() end
+        end)
+    end
 
     btn.pinMark = btn:CreateTexture(nil, "OVERLAY", nil, 7)
     btn.pinMark:SetTexture("Interface\\Buttons\\WHITE8X8")

@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.6.1
+- Glow: when a new quest item (or quest starter, currency or high-quality item) is moused over, the green new-item glow goes away and its own glow takes over right away instead of leaving the item with none.
+
 ## v0.6.0
 - Quest item cleanup: Shift+Alt+click a quest item to mark it (small red cross), then Alt+click the minimap button or type /baggie toss to destroy the marked ones. Reads the game's own quest log and keeps anything a quest in it could want (Questie, if you have it, adds a second check); keeps everything if it can't read the log; checks again just before each item goes and asks you to confirm first.
 - Item glows: separate switch and color for quest items, quest starters and currencies (Blood Shard and the like no longer glow as quest items unless you turn that on).
