@@ -109,6 +109,7 @@ local SECTIONS = {
         { key = "slotEdgeSize", kind = "slider", label = "Slot edge thickness", min = 1, max = 4, step = 1 },
         { key = "iconInset", kind = "slider", label = "Icon padding inside slot", min = 0, max = 10, step = 1 },
         { key = "iconCrop", kind = "check", label = "Trim icon edges" },
+        { key = "junkGray", kind = "check", label = "Gray out grey items (take the color out of the icon)" },
         { key = "junkDim", kind = "check", label = "Dim grey items" },
         { key = "junkAlpha", kind = "slider", label = "Grey item opacity", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "font", kind = "cycle", label = "Font for counts and the bottom line", values = { "frizqt", "arial", "morpheus", "skurri" }, names = FONTNAMES },
@@ -135,7 +136,9 @@ local SECTIONS = {
         { key = "glowMiscColor", kind = "color", label = "   Currency color" },
         { key = "glowQuality", kind = "check", label = "Glow high-quality items" },
         { key = "glowMinQuality", kind = "slider", label = "Quality glows start at (4 = epic)", min = 2, max = 6, step = 1 },
-        { key = "glowStrength", kind = "slider", label = "Glow brightness", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "glowStrength", kind = "slider", label = "Glow brightness (quest and new items)", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "glowQualityStrength", kind = "slider", label = "Item quality glow brightness", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "glowSize", kind = "slider", label = "Glow size (how far it reaches past the slot)", min = 1.2, max = 2.6, step = 0.05, fmt = "%.2f" },
     } },
     { id = "flair", title = "Flair", scope = "all", rows = {
         { key = "flair", kind = "cycle", label = "Window trim", values = { "none", "gilded", "royal" },

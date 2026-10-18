@@ -191,12 +191,14 @@ end
 local function UpdateGlow(btn, tex, quality, id, count)
     btn.glowArgs = { tex, quality, id, count }   -- so mousing over can redraw the glow that is left once "new" is cleared
     local r, g, b
+    local fromQuality = false
     if tex then
         local okK, kind = pcall(QuestKind, btn, id)
         if okK and kind then r, g, b = B.KindColor(kind) end
     end
     if not r and tex and B.db.glowQuality and (quality or 0) >= (tonumber(B.db.glowMinQuality) or 4) then
         r, g, b = QualityColor(quality)
+        fromQuality = true
     end
     local key = btn.bag .. ":" .. btn.slot
     local n = tonumber(count) or 1
@@ -206,8 +208,10 @@ local function UpdateGlow(btn, tex, quality, id, count)
     lastStack[key] = tex and n or nil
     if not r and tex and B.db.glowNew and btn.baggieNew then r, g, b = 0.4, 1, 0.6 end
     if r then
-        btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
-        btn.glow:SetVertexColor(r, g, b, math.max(0.1, math.min(1, tonumber(B.db.glowStrength) or 0.8)))
+        local gs = tonumber(B.db.glowSize) or 1.75
+        btn.glow:SetSize(CELL * gs, CELL * gs)
+        local str = fromQuality and (tonumber(B.db.glowQualityStrength) or 0.8) or (tonumber(B.db.glowStrength) or 0.8)
+        btn.glow:SetVertexColor(r, g, b, math.max(0.1, math.min(1, str)))
         btn.glow:SetAlpha(1)
         btn.glow:Show()
         B.glowBtns = B.glowBtns or setmetatable({}, { __mode = "k" })
@@ -236,11 +240,12 @@ local function UpdateButton(btn, text)
     local tex, count, locked, quality, link, id = B.SlotInfo(btn.bag, btn.slot)
     btn.itemID, btn.link = id, link
     pcall(SetIcon, btn, tex)
-    pcall(SetDesat, btn, locked and true or false)
+    local gray = (locked or (tex and quality == 0 and B.db.junkGray)) and true or false
+    pcall(SetDesat, btn, gray)
     if tex then
         btn.baggieIcon:SetTexture(tex)
         btn.baggieIcon:Show()
-        btn.baggieIcon:SetDesaturated(locked and true or false)
+        btn.baggieIcon:SetDesaturated(gray)
     else
         btn.baggieIcon:Hide()
     end

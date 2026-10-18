@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.2
+- New: "Gray out grey items" (Options > Slots and text, on by default) takes the color out of grey-quality icons in the bags, bank and guild bank. "Dim grey items" still fades them separately; use either or both.
+- New glow sliders (Options > Item glows): "Item quality glow brightness" (separate from the quest and new-item glow brightness) and "Glow size", which sets how far every glow reaches past the slot. Both apply to the bags, bank and guild bank.
+
 ## v0.6.1
 - Glow: when a new quest item (or quest starter, currency or high-quality item) is moused over, the green new-item glow goes away and its own glow takes over right away instead of leaving the item with none.
 

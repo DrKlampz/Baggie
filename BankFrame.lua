@@ -704,7 +704,7 @@ local function GuildRefreshRaw()
         if ok and tex then
             btn.icon:SetTexture(tex)
             btn.icon:Show()
-            btn.icon:SetDesaturated(locked and true or false)
+            btn.icon:SetDesaturated((locked or (quality == 0 and B.db.junkGray)) and true or false)
             if B.db.iconCrop then btn.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) else btn.icon:SetTexCoord(0, 1, 0, 1) end
         else
             btn.icon:Hide()

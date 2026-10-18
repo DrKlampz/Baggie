@@ -25,6 +25,7 @@ B.DEFAULTS = {
     goldMode = "icons",     -- icons | text | gold | none
     footerSize = 11,
     junkDim = true,      -- dim grey items
+    junkGray = true,     -- also take the color out of grey items
     -- appearance
     bgStyle = "solid",      -- solid | dark | parchment | marble | rock | tooltip | leather | stone | linen | carbon | brushed | gradient | custom
     bgCustom = "",          -- texture path (or a SharedMedia background name) used when bgStyle is custom
@@ -79,6 +80,8 @@ B.DEFAULTS = {
     glowMinQuality = 4,  -- ... from this quality up (4 = epic)
     glowNew = false,     -- items that just arrived glow until you point at them
     glowStrength = 0.8,  -- how bright the glows are
+    glowQualityStrength = 0.8, -- how bright the item quality glow is (quest and new-item glows use the one above)
+    glowSize = 1.75,     -- how far the glows reach past the slot
     point = nil,         -- saved window position
     keyring = false,
     showReagent = true,  -- reagent bag as its own section (if the game has one)
@@ -121,7 +124,7 @@ end
 B.LOOK = {}
 for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize flair pulse showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
-    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength junkDim ilvl " ..
+    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength glowQualityStrength glowSize junkDim junkGray ilvl " ..
     "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
 B.LAYOUT = { cellSize = true, gap = true, padding = true, bankCols = true }
 

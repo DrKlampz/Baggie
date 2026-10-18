@@ -36,7 +36,18 @@ local function Color(kind, quality)
     if not db then return end
     local r, g, b = B.KindColor(kind)
     if r then return r, g, b end
-    if db.glowQuality and (quality or 0) >= (tonumber(db.glowMinQuality) or 4) then return QualityRGB(quality) end
+    if db.glowQuality and (quality or 0) >= (tonumber(db.glowMinQuality) or 4) then
+        local qr, qg, qb = QualityRGB(quality)
+        return qr, qg, qb, true
+    end
+end
+
+-- glow size and brightness from the settings; the item quality glow has its own brightness
+local function GlowLook(isQuality)
+    local db = B.db
+    local size = tonumber(db.glowSize) or 1.75
+    local str = isQuality and (tonumber(db.glowQualityStrength) or 0.8) or (tonumber(db.glowStrength) or 0.8)
+    return size, math.max(0.1, math.min(1, str))
 end
 
 local function Overlay(btn)
@@ -51,12 +62,13 @@ local function Overlay(btn)
     return g
 end
 
-local function Apply(btn, r, g, b)
+local function Apply(btn, r, g, b, isQuality)
     local o = Overlay(btn)
     if not r then o:Hide() return end
     local w = (btn:GetWidth() or 37)
-    o:SetSize(w * 1.75, w * 1.75)
-    o:SetVertexColor(r, g, b, math.max(0.1, math.min(1, tonumber(B.db.glowStrength) or 0.8)))
+    local size, str = GlowLook(isQuality)
+    o:SetSize(w * size, w * size)
+    o:SetVertexColor(r, g, b, str)
     o:Show()
 end
 
@@ -161,11 +173,12 @@ end
 function B.GlowButton(btn, kind, quality, cell, hasItem)
     local g = btn.glow
     if not g then return end
-    local r, gg, b
-    if hasItem then r, gg, b = Color(kind, quality) end
+    local r, gg, b, isQuality
+    if hasItem then r, gg, b, isQuality = Color(kind, quality) end
     if not r then g:Hide() return end
     local w = tonumber(cell) or btn:GetWidth() or 37
-    g:SetSize(w * 1.75, w * 1.75)
-    g:SetVertexColor(r, gg, b, math.max(0.1, math.min(1, tonumber(B.db.glowStrength) or 0.8)))
+    local size, str = GlowLook(isQuality)
+    g:SetSize(w * size, w * size)
+    g:SetVertexColor(r, gg, b, str)
     g:Show()
 end
