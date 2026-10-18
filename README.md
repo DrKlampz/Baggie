@@ -12,6 +12,18 @@ Your backpack and bags open in a single window. Save an item to a spot and it st
 
 Spots are virtual. Baggie never moves anything in your real bags, so it is instant and safe. If saved spots would push a real item off the bottom of the window, the window grows by a row so nothing is ever hidden.
 
+## Bank
+
+The bank and guild bank open as Baggie windows too, with the same saved spots. A **Deposit** button opens a menu of quick deposits from your bags (or Ctrl+Alt+click an item). On a character that has not bought a bank tab yet, the window says so and shows a **Buy tab** button with the price. Escape closes the bank and ends the banker conversation properly.
+
+## Quest item cleanup
+
+Shift+Alt+click a quest item to mark it with a small red cross. Alt+click the minimap button (or type `/baggie toss`) to destroy the marked items. Baggie reads the game's own quest log and keeps anything a quest you have could still want (Questie, if installed, adds a second check). If it cannot read the log it keeps everything, it checks again just before each item goes, and it asks you to confirm first. `/baggie toss list` shows the marks and `/baggie toss clear` removes them.
+
+## Glows
+
+New items, quest items, quest starters and currencies each have their own glow switch and color under `/baggie options`. Currencies that the game files as quest items (Blood Shard and the like) only glow if you turn that on. New-item glow only marks items that came in from outside (loot, mail, bank, vendor, trade).
+
 ## Also
 
 - Search box: dims everything that does not match a name or item type.
@@ -33,6 +45,7 @@ Spots are virtual. Baggie never moves anything in your real bags, so it is insta
 | `/baggie borders` | Quality borders on or off |
 | `/baggie keyring` | Show or hide the keyring |
 | `/baggie default` | Switch between Baggie and the default bags |
+| `/baggie toss [list|clear]` | Destroy marked quest items, list or clear the marks |
 | `/baggie reset` | Put the window back at its default position |
 
 MIT licensed.
