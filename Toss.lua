@@ -287,3 +287,86 @@ function T.List()
     end
     if n == 0 then Say("no items marked") end
 end
+
+
+----------------------------------------------------------------------
+-- Ammo keeper: arrows and bullets that ended up in an ordinary bag go back into your quiver / ammo pouch.
+-- (Lives here so a /reload is enough to load it.)
+----------------------------------------------------------------------
+do
+    local CC = _G.C_Container
+    local running, skipUntil = false, {}
+    local function Fam(id)
+        -- 1 = arrows, 2 = bullets; looked up from the item's class (6 = projectile) so no other API is needed
+        local ok, _, _, _, _, _, classID, subID = pcall(function() return _G.C_Item.GetItemInfoInstant(id) end)
+        if ok and classID == 6 then
+            if subID == 2 then return 1 elseif subID == 3 then return 2 end
+        end
+        return nil
+    end
+    local function Stack(id)
+        local n = (_G.C_Item and _G.C_Item.GetItemInfo and select(8, _G.C_Item.GetItemInfo(id))) or (_G.GetItemInfo and select(8, _G.GetItemInfo(id)))
+        return tonumber(n) or 200
+    end
+    local function Plan()
+        local targets = {}
+        for bag = 1, (tonumber(_G.NUM_BAG_SLOTS) or 4) do
+            local f = B.BagFamily(bag)
+            if f == 1 or f == 2 then targets[#targets + 1] = { bag = bag, fam = f } end
+        end
+        if #targets == 0 then return nil end
+        for bag = 0, (tonumber(_G.NUM_BAG_SLOTS) or 4) do
+            local special = false
+            for _, t in ipairs(targets) do if t.bag == bag then special = true end end
+            if not special then
+                for slot = 1, B.NumSlots(bag) do
+                    local _, count, locked, _, link, id = B.SlotInfo(bag, slot)
+                    if link and id and not locked and not (skipUntil[bag .. ":" .. slot] and skipUntil[bag .. ":" .. slot] > GetTime()) then
+                        local fam = Fam(id)
+                        if fam then
+                            for _, t in ipairs(targets) do
+                                if t.fam == fam then
+                                    local empty
+                                    for ts = 1, B.NumSlots(t.bag) do
+                                        local _, c2, l2, _, lk2, id2 = B.SlotInfo(t.bag, ts)
+                                        if not l2 then
+                                            if lk2 and id2 == id and (tonumber(c2) or 0) < Stack(id) then return { bag, slot, t.bag, ts } end
+                                            if not lk2 and not empty then empty = ts end
+                                        end
+                                    end
+                                    if empty then return { bag, slot, t.bag, empty } end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local function Step(n)
+        if (_G.InCombatLockdown and _G.InCombatLockdown()) or (_G.GetCursorInfo and _G.GetCursorInfo()) or n > 12 then running = false return end
+        local m = Plan()
+        if not m then running = false return end
+        skipUntil[m[1] .. ":" .. m[2]] = GetTime() + 20      -- if the game refuses this move, don't try the same one again for a while
+        B.Pickup(m[1], m[2])
+        B.Pickup(m[3], m[4])
+        if _G.ClearCursor then _G.ClearCursor() end
+        _G.C_Timer.After(0.4, function() skipUntil[m[1] .. ":" .. m[2]] = nil Step(n + 1) end)
+    end
+    function B.KeepAmmo()
+        if running or not (B.db and B.db.keepAmmo ~= false) then return end
+        if _G.InCombatLockdown and _G.InCombatLockdown() then return end
+        if not Plan() then return end
+        running = true
+        Step(1)
+    end
+    local pending
+    local ev = _G.CreateFrame("Frame")
+    ev:RegisterEvent("BAG_UPDATE_DELAYED")
+    ev:RegisterEvent("PLAYER_REGEN_ENABLED")
+    ev:SetScript("OnEvent", function()
+        if pending then return end
+        pending = true
+        _G.C_Timer.After(1.2, function() pending = nil pcall(B.KeepAmmo) end)
+    end)
+end

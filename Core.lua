@@ -26,6 +26,8 @@ B.DEFAULTS = {
     footerSize = 11,
     junkDim = true,      -- dim grey items
     junkGray = true,     -- also take the color out of grey items
+    redUnusable = true,  -- red tint on items you cannot use or equip
+    keepAmmo = true,     -- arrows and bullets in an ordinary bag go back into your quiver / ammo pouch
     startMark = true,    -- a yellow ! in the middle of items that start a quest, until you accept the quest
     -- appearance
     bgStyle = "solid",      -- solid | dark | parchment | marble | rock | tooltip | leather | stone | linen | carbon | brushed | gradient | custom
@@ -125,7 +127,7 @@ end
 B.LOOK = {}
 for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize flair pulse showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
-    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength glowQualityStrength glowSize junkDim junkGray startMark ilvl " ..
+    "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength glowQualityStrength glowSize junkDim junkGray redUnusable startMark ilvl " ..
     "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
 B.LAYOUT = { cellSize = true, gap = true, padding = true, bankCols = true }
 
@@ -186,6 +188,7 @@ local reported = {}
 function B.Safe(what, fn)
     return function(...)
         local ok, err = pcall(fn, ...)
+        if not ok and B.Issue then B.Issue("lua", what, err) end
         if not ok and not reported[what] then
             reported[what] = true
             B.Print("error in " .. what .. ": " .. tostring(err))
@@ -782,7 +785,17 @@ end
 -- Saved spots (per character)
 ----------------------------------------------------------------------
 function B.CharKey()
-    local name = _G.UnitName and _G.UnitName("player") or "?"
+    -- two-part names ("Dr Flamel") come back from UnitName as first name + last name in the realm slot
+    local name = "?"
+    if _G.UnitName then
+        local first, second = _G.UnitName("player")
+        name = first or "?"
+        if type(first) == "string" and type(second) == "string" and second ~= "" and not first:find(" ", 1, true) then
+            local r1 = _G.GetRealmName and _G.GetRealmName()
+            local r2 = _G.GetNormalizedRealmName and _G.GetNormalizedRealmName()
+            if second ~= r1 and second ~= r2 then name = first .. " " .. second end
+        end
+    end
     local realm = _G.GetRealmName and _G.GetRealmName() or "?"
     return name .. "-" .. realm
 end

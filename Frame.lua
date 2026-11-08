@@ -239,6 +239,66 @@ do
 end
 function B.ArmGlows() glowArmed = true end
 
+-- red tint on items this character cannot use or equip. The item tooltip already shows the reason in red
+-- (level, class, armor type, skill), so read it from there once per item and remember the answer.
+local scanTip
+local unusableCache = {}
+local function IsRedColor(r, g, b)
+    return type(r) == "number" and r > 0.85 and g < 0.3 and b < 0.3
+end
+function B.Unusable(link)
+    if type(link) ~= "string" then return false end
+    local c = unusableCache[link]
+    if c ~= nil then return c end
+    if not scanTip then
+        scanTip = CreateFrame("GameTooltip", "BaggieScanTip", nil, "GameTooltipTemplate")
+        scanTip:SetOwner(UIParent, "ANCHOR_NONE")
+    end
+    scanTip:ClearLines()
+    scanTip:SetOwner(UIParent, "ANCHOR_NONE")
+    local ok = pcall(scanTip.SetHyperlink, scanTip, link)
+    if not ok then return false end
+    local n = scanTip:NumLines() or 0
+    if n < 1 then return false end   -- not loaded yet: ask again next time
+    local red = false
+    for i = 2, n do
+        for _, side in ipairs({ "Left", "Right" }) do
+            local fs = _G["BaggieScanTipText" .. side .. i]
+            if fs and fs.GetText then
+                local okT, text = pcall(fs.GetText, fs)
+                if okT and type(text) == "string" and text ~= "" and not text:lower():find("already known", 1, true) then
+                    local okC, r, g, b = pcall(fs.GetTextColor, fs)
+                    if okC and IsRedColor(r, g, b) then red = true end
+                end
+            end
+        end
+    end
+    unusableCache[link] = red
+    return red
+end
+do
+    local ev = CreateFrame("Frame")
+    for _, e in ipairs({ "PLAYER_LEVEL_UP", "SKILL_LINES_CHANGED", "SPELLS_CHANGED", "PLAYER_ENTERING_WORLD" }) do pcall(ev.RegisterEvent, ev, e) end
+    ev:SetScript("OnEvent", function() wipe(unusableCache) end)
+end
+function B.PaintUnusable(btn, link)
+    local on = B.db and B.db.redUnusable and link and B.Unusable(link)
+    if on then
+        local t = btn.baggieRed
+        if not t then
+            t = btn:CreateTexture(nil, "ARTWORK", nil, 4)
+            t:SetTexture("Interface\\Buttons\\WHITE8X8")
+            t:SetPoint("TOPLEFT", 2, -2)
+            t:SetPoint("BOTTOMRIGHT", -2, 2)
+            t:SetVertexColor(1, 0.1, 0.1, 0.45)
+            btn.baggieRed = t
+        end
+        t:Show()
+    elseif btn.baggieRed then
+        btn.baggieRed:Hide()
+    end
+end
+
 local function UpdateButton(btn, text)
     local tex, count, locked, quality, link, id = B.SlotInfo(btn.bag, btn.slot)
     btn.itemID, btn.link = id, link
@@ -252,6 +312,8 @@ local function UpdateButton(btn, text)
     else
         btn.baggieIcon:Hide()
     end
+    pcall(B.PaintUnusable, btn, tex and link or nil)
+    if _G.Outfitter_BagArrow and not btn.isBank then pcall(_G.Outfitter_BagArrow, btn, btn.bag, btn.slot) end     -- Outfitter: green arrow on the best upgrades
     local n = tonumber(count) or 0
     btn.baggieCount:SetText((tex and n > 1) and tostring(n) or "")
     QuietTemplate(btn)
@@ -696,8 +758,8 @@ local function PlaceSections(startY, inset)
             h.text:ClearAllPoints() h.text:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y)
             h.line:SetVertexColor(e[1], e[2], e[3], 0.5)
             h.line:ClearAllPoints()
-            h.line:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -(y - 14))
-            h.line:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -(y - 14))
+            h.line:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -(y - 5))
+            h.line:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -(y - 5))
             h.line:SetHeight(1)
             h.text:Show() h.line:Show()
             y = y + 18
@@ -1052,6 +1114,10 @@ function F.ApplyLook()
         Look(win.reagBtn, B.db.showReagent)
         local r = B.ReagentBagID()
         win.reagBtn:SetShown(r and B.NumSlots(r) > 0 or false)
+        -- the search box sits to the left of whichever toggle buttons are showing, never under them
+        local leftmost = win.reagBtn:IsShown() and win.reagBtn or win.keyBtn
+        win.search:ClearAllPoints()
+        win.search:SetPoint("RIGHT", leftmost, "LEFT", -10, 0)
     end
     win.sellBtn:SetShown(B.db.sellButton and merchantOpen)
     F.ApplyScale()
@@ -1149,8 +1215,14 @@ local function Create()
         b.key = key
         b:SetScript("OnClick", function()
             B.db[key] = not B.db[key]
-            F.ApplyLook()
-            F.Refresh()
+            -- each step on its own, so a problem in one can never leave the click doing nothing
+            local okA, errA = pcall(F.ApplyLook)
+            if not okA and B.Issue then pcall(B.Issue, "lua", "toggle button", tostring(errA)) end
+            local okR, errR = pcall(F.Refresh)
+            if not okR and B.Issue then pcall(B.Issue, "lua", "toggle button refresh", tostring(errR)) end
+            if key == "keyring" and B.db[key] and B.NumSlots(_G.KEYRING_CONTAINER or -2) == 0 then
+                B.Print("this character has no keyring slots, so there is nothing to show.")
+            end
         end)
         b:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")

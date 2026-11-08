@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.3
+- Fix: characters with two-part names no longer share saved slots with each other.
+- New: items you cannot use or equip get a red tint (Options > Slots and text).
+- New: ammo stays in your quiver or ammo pouch; strays are moved back out of combat.
+- Fix: divider line, search box and toggle buttons in the bag window.
+- New: /issues log of problems.
+
 ## v0.6.2
 - New: a yellow ! in the middle of any item that starts a quest (the kind you right-click to accept), so you can tell you have not used it yet. It disappears once the quest is accepted. Works in the bags, bank and guild bank; turn it off under Item glows ("Yellow ! in the middle of items that start a quest").
 - New: "Gray out grey items" (Options > Slots and text, on by default) takes the color out of grey-quality icons in the bags, bank and guild bank. "Dim grey items" still fades them separately; use either or both.

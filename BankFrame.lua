@@ -730,6 +730,7 @@ local function GuildRefreshRaw()
             local name = (type(link) == "string" and link:match("%[(.-)%]") or ""):lower()
             if not name:find(text, 1, true) then dim = 0.25 end
         end
+        if B.PaintUnusable then pcall(B.PaintUnusable, btn, tex and link or nil) end
         btn:SetAlpha(dim)
     end
     local rows = math.ceil(SLOTS / cols)

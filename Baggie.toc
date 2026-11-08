@@ -9,6 +9,7 @@
 ## X-License: MIT
 ## X-Wago-ID: RNL4eENo
 
+IssueLog.lua
 Core.lua
 Roster.lua
 Layout.lua

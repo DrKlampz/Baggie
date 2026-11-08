@@ -111,6 +111,8 @@ local SECTIONS = {
         { key = "iconCrop", kind = "check", label = "Trim icon edges" },
         { key = "junkGray", kind = "check", label = "Gray out grey items (take the color out of the icon)" },
         { key = "junkDim", kind = "check", label = "Dim grey items" },
+        { key = "redUnusable", kind = "check", label = "Tint items red that you cannot use or equip" },
+        { key = "keepAmmo", kind = "check", label = "Move arrows and bullets back into the quiver / ammo pouch" },
         { key = "junkAlpha", kind = "slider", label = "Grey item opacity", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "font", kind = "cycle", label = "Font for counts and the bottom line", values = { "frizqt", "arial", "morpheus", "skurri" }, names = FONTNAMES },
         { key = "countSize", kind = "slider", label = "Stack count size", min = 8, max = 18, step = 1 },
