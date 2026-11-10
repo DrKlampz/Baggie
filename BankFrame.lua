@@ -490,10 +490,45 @@ local function BankCreate()
     bw.buy = Button(bw, "Buy bag slot", 90, function()
         if bw.buy.tabbed then
             local CB, E = _G.C_Bank, _G.Enum
-            if CB and CB.PurchaseBankTab and E and E.BankType then
-                pcall(CB.PurchaseBankTab, E.BankType.Character)
-                if _G.C_Timer then _G.C_Timer.After(0.5, function() if SoonBank then SoonBank() end end) end
+            if not (CB and CB.PurchaseBankTab and E and E.BankType) then return end
+            local bankType = E.BankType.Character
+            local function Count()
+                local ok, ids = pcall(CB.FetchPurchasedBankTabIDs, bankType)
+                return ok and type(ids) == "table" and #ids or -1
             end
+            local before = Count()
+            local lastErr
+            local f = B.buyWatch or CreateFrame("Frame")
+            B.buyWatch = f
+            f:RegisterEvent("UI_ERROR_MESSAGE")
+            f:SetScript("OnEvent", function(_, _, _, msg) lastErr = msg end)
+            local function Buy()
+                local ok, err = pcall(CB.PurchaseBankTab, bankType)
+                if not ok then lastErr = tostring(err) end
+                if _G.C_Timer then
+                    _G.C_Timer.After(0.5, function() if SoonBank then SoonBank() end end)
+                    _G.C_Timer.After(2.0, function()
+                        if SoonBank then SoonBank() end
+                        f:UnregisterEvent("UI_ERROR_MESSAGE")
+                        if Count() == before then
+                            B.Print("The game did not buy the tab" .. (lastErr and (": " .. tostring(lastErr)) or ". Check you have enough gold and are standing at the banker."))
+                            if B.Issue then B.Issue("blocked", "buy bank tab", lastErr or "no tab was added") end
+                        end
+                    end)
+                end
+            end
+            -- ask the way the game's own bank does (its confirm popup shows the price), else buy directly
+            local dlg = _G.StaticPopupDialogs and _G.StaticPopupDialogs["CONFIRM_BUY_BANK_TAB"]
+            if dlg and _G.StaticPopup_Show then
+                local okp = pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_TAB", nil, nil, { bankType = bankType })
+                if okp then
+                    if _G.C_Timer then
+                        _G.C_Timer.After(2.5, function() SoonBank() end)
+                    end
+                    return
+                end
+            end
+            Buy()
         elseif _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
     end)
     bw.buy:SetPoint("BOTTOMRIGHT", bw, "BOTTOMRIGHT", -12, 30)

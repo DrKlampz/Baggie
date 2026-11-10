@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Bank: buying a bank tab now goes through the game's own confirm window (it shows the price), and if the game refuses, Baggie tells you why and records it in the issue log.
+
 ## v0.6.3
 - Fix: characters with two-part names no longer share saved slots with each other.
 - New: items you cannot use or equip get a red tint (Options > Slots and text).
