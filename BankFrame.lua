@@ -496,6 +496,9 @@ local function BankCreate()
             if InCombatLockdown() then B.Print("Can't do that in combat.") return end
             B.nativeBuy = true
             pcall(f.SetParent, f, UIParent)
+            pcall(f.SetAlpha, f, 1)
+            pcall(f.ClearAllPoints, f)
+            pcall(f.SetPoint, f, "TOPLEFT", UIParent, "TOPLEFT", 20, -120)
             pcall(f.SetFrameStrata, f, "FULLSCREEN_DIALOG")
             pcall(f.Show, f)
             B.Print("The game's bank window is open: click its + tab to buy the next tab. Baggie hides it again afterwards.")
@@ -514,7 +517,10 @@ end
 
 local function RestoreBlizzardBank()
     local f = _G.BankFrame
-    if f and not InCombatLockdown() then pcall(f.SetParent, f, UIParent) end
+    if f and not InCombatLockdown() then
+        pcall(f.SetParent, f, UIParent)
+        pcall(f.SetAlpha, f, 1)
+    end
 end
 
 -- sorting and the repeated refreshes are all driven by events
@@ -563,7 +569,15 @@ ev:SetScript("OnEvent", function(_, event)
     if not B.db then return end
     if B.nativeBuy and (event == "BANK_TABS_CHANGED" or event == "BANK_TAB_SETTINGS_UPDATED") and bankOpen then
         B.nativeBuy = nil
-        C_Timer.After(0.6, function() if bankOpen and not InCombatLockdown() then HideBlizzardBank() end end)
+        -- hiding the game's window would tell the game the banker conversation is over, so just make it invisible
+        C_Timer.After(0.6, function()
+            local f = _G.BankFrame
+            if bankOpen and f and not InCombatLockdown() then
+                pcall(f.SetAlpha, f, 0)
+                pcall(f.ClearAllPoints, f)
+                pcall(f.SetPoint, f, "TOPLEFT", UIParent, "TOPLEFT", -6000, 0)
+            end
+        end)
     end
     if event == "BANKFRAME_OPENED" then
         Dbg("BANKFRAME_OPENED received")
@@ -927,7 +941,10 @@ gev:SetScript("OnEvent", function(_, event)
         gOpen = false
         if gw and gw:IsShown() then gw:Hide() end
         local f = _G.GuildBankFrame
-        if f and not InCombatLockdown() then pcall(f.SetParent, f, UIParent) end
+        if f and not InCombatLockdown() then
+        pcall(f.SetParent, f, UIParent)
+        pcall(f.SetAlpha, f, 1)
+    end
     else
         if gw and gw:IsShown() then SoonGuild() end
     end
@@ -956,7 +973,10 @@ do
             gOpen = false
             if gw and gw:IsShown() then gw:Hide() end
             local f = _G.GuildBankFrame
-            if f and not InCombatLockdown() then pcall(f.SetParent, f, UIParent) end
+            if f and not InCombatLockdown() then
+        pcall(f.SetParent, f, UIParent)
+        pcall(f.SetAlpha, f, 1)
+    end
         end
     end)
 end
