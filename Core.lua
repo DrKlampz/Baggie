@@ -22,7 +22,10 @@ B.DEFAULTS = {
     titleColor = { 0.13, 0.11, 0.07 },
     slotColor = { 0.13, 0.13, 0.16 },
     counterMode = "used",   -- used | free | freeonly | none
-    goldMode = "icons",     -- icons | text | gold | none
+    goldMode = "icons",     -- icons | text | plain | gold | goldsilver | short | none
+    goldShowSilver = true,  -- show the silver part
+    goldShowCopper = true,  -- show the copper part
+    goldSep = "comma",      -- thousands separator: comma | space | dot | none
     footerSize = 11,
     junkDim = true,      -- dim grey items
     junkGray = true,     -- also take the color out of grey items
@@ -128,7 +131,7 @@ B.LOOK = {}
 for k in ("bgColor alpha edgeColor titleColor slotColor slotColor2 slotTexture slotEmptyAlpha slotQualityTint slotQualityStrength slotEdge slotEdgeColor slotEdgeAlpha slotEdgeSize bgStyle bgCustom bgNoTint edgeAlpha titleAlpha edgeStyle edgeSize flair pulse showTitleBar " ..
     "titleSize titleFont font slotStyle slotAlpha iconCrop iconInset junkAlpha countSize countPos ilvlSize ilvlPos ilvlQuality " ..
     "borderMode borderColor borderSize borderMinQuality glowQuest glowQuestColor glowStarts glowStartsColor glowMisc glowMiscColor glowQuality glowMinQuality glowStrength glowQualityStrength glowSize junkDim junkGray redUnusable startMark ilvl " ..
-    "showFooter counterMode goldMode footerSize"):gmatch("%S+") do B.LOOK[k] = true end
+    "showFooter counterMode goldMode goldShowSilver goldShowCopper goldSep footerSize"):gmatch("%S+") do B.LOOK[k] = true end
 B.LAYOUT = { cellSize = true, gap = true, padding = true, bankCols = true }
 
 local function DeepCopy(v)
@@ -1051,7 +1054,7 @@ function B.PaintSlot(btn, bgTex, filled, quality)
         end
     elseif style == "texture" then
         bgTex:SetTexture(SLOT_TILES[db.slotTexture or "leather"] or SLOT_TILES.leather)
-        bgTex:SetVertexColor(c[1] * 2, c[2] * 2, c[3] * 2, a)
+        bgTex:SetVertexColor(math.min(1, c[1] * 4), math.min(1, c[2] * 4), math.min(1, c[3] * 4), a)
     elseif style == "game" then
         bgTex:SetTexture("Interface\\PaperDoll\\UI-Backpack-EmptySlot")
         bgTex:SetVertexColor(1, 1, 1, a)
@@ -1095,4 +1098,51 @@ function B.PaintSlot(btn, bgTex, filled, quality)
     e[3]:ClearAllPoints() e[3]:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, -sz) e[3]:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 0, sz) e[3]:SetWidth(sz)
     e[4]:ClearAllPoints() e[4]:SetPoint("TOPRIGHT", btn, "TOPRIGHT", 0, -sz) e[4]:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 0, sz) e[4]:SetWidth(sz)
     for i = 1, 4 do e[i]:SetVertexColor(col[i][1], col[i][2], col[i][3], col[i][4]) e[i]:Show() end
+end
+
+
+----------------------------------------------------------------------
+-- Money text for the bottom line of the bags, bank and guild bank.
+----------------------------------------------------------------------
+local SEPS = { comma = ",", space = " ", dot = ".", none = "" }
+local function Group(n, sep)
+    local str = tostring(math.floor(n))
+    if sep == "" then return str end
+    local out = str:reverse():gsub("(%d%d%d)", "%1" .. sep):reverse()
+    if out:sub(1, #sep) == sep then out = out:sub(#sep + 1) end
+    return out
+end
+function B.MoneyString(money)
+    local db = B.GetLookSettings and B.GetLookSettings() or B.db or {}
+    money = math.max(0, tonumber(money) or 0)
+    local mode = db.goldMode or "icons"
+    if mode == "none" then return "" end
+    local g, s, c = math.floor(money / 10000), math.floor(money / 100) % 100, money % 100
+    local showS, showC = db.goldShowSilver ~= false, db.goldShowCopper ~= false
+    local sep = SEPS[db.goldSep or "comma"] or ","
+    local size = math.max(9, tonumber(db.footerSize) or 11)
+    local gs = Group(g, sep)
+    if mode == "short" then
+        local t
+        if g >= 1000000 then t = ("%.2f"):format(g / 1000000):gsub("%.?0+$", "") .. "m"
+        elseif g >= 10000 then t = ("%.1f"):format(g / 1000):gsub("%.?0+$", "") .. "k"
+        else t = gs .. "g" end
+        return "|cffffd700" .. t .. "|r"
+    end
+    if mode == "gold" then return gs .. "|cffffd700g|r" end
+    if mode == "goldsilver" then showC = false end
+    local parts = {}
+    if mode == "icons" then
+        local function I(tex) return ("|TInterface\\MoneyFrame\\UI-%sIcon:%d:%d:2:0|t"):format(tex, size, size) end
+        if g > 0 or (not showS and not showC) or (s == 0 and c == 0) then parts[#parts + 1] = gs .. I("Gold") end
+        if showS and (s > 0 or (g > 0 and c > 0 and showC)) then parts[#parts + 1] = s .. I("Silver") end
+        if showC and (c > 0 or #parts == 0) then parts[#parts + 1] = c .. I("Copper") end
+        return table.concat(parts, " ")
+    end
+    local plain = mode == "plain"
+    local function L(n, letter, col) return plain and (n .. letter) or ("|cff" .. col .. n .. letter .. "|r") end
+    parts[1] = L(gs, "g", "ffd700")
+    if showS then parts[#parts + 1] = L(s, "s", "c7c7cf") end
+    if showC then parts[#parts + 1] = L(c, "c", "eda55f") end
+    return table.concat(parts, " ")
 end

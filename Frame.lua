@@ -75,8 +75,11 @@ local function StyleBorder(b, r, g, bl, size)
 end
 
 -- appearance helpers
-local FONTS = { frizqt = "Fonts\\FRIZQT__.TTF", arial = "Fonts\\ARIALN.TTF", morpheus = "Fonts\\MORPHEUS.TTF", skurri = "Fonts\\SKURRI.TTF" }
-function B.FontPath(key) return FONTS[key] or FONTS.frizqt end
+local FONTS = B.FONT_PATHS or { frizqt = "Fonts\\FRIZQT__.TTF" }
+function B.FontPath(key)
+    if type(key) == "string" and key:find("\\", 1, true) then return key end   -- already a file path (GreedUI's font)
+    return FONTS[key] or FONTS.frizqt
+end
 B.styleVer = 1
 local CORNER = { BOTTOMRIGHT = { -3, 3 }, BOTTOMLEFT = { 3, 3 }, TOPRIGHT = { -2, -3 }, TOPLEFT = { 3, -3 }, CENTER = { 0, 0 } }
 
@@ -858,17 +861,8 @@ local function Footer(slots)
     win.free:SetShown(B.db.showFooter and cm ~= "none")
 
     local money = _G.GetMoney and _G.GetMoney() or 0
-    local gm = B.db.goldMode
-    local g, s, c = math.floor(money / 10000), math.floor(money / 100) % 100, money % 100
-    local text
-    if gm == "gold" then
-        text = tostring(g):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "") .. "|cffffd700g|r"
-    elseif gm == "icons" and _G.GetCoinTextureString then
-        text = _G.GetCoinTextureString(money)
-    else
-        text = ("|cffffd700%dg|r |cffc7c7cf%ds|r |cffeda55f%dc|r"):format(g, s, c)
-    end
-    win.money:SetText(text)
+    local gm = (B.GetLookSettings and B.GetLookSettings() or B.db).goldMode
+    win.money:SetText(B.MoneyString(money))
     win.money:SetShown(gm ~= "none")
     win.hint:Hide()
     F.UpdateBagBar()

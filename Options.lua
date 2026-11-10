@@ -39,7 +39,8 @@ end
 local BGNAMES = { solid = "Solid color", dark = "Dark panel", parchment = "Parchment", marble = "Marble", rock = "Rock",
     tooltip = "Tooltip", leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon fiber",
     brushed = "Brushed metal", gradient = "Fade, light to dark", custom = "Custom (path below)" }
-local FONTNAMES = { morpheus = "Fancy (Morpheus)", frizqt = "Standard", arial = "Narrow (Arial)", skurri = "Rough (Skurri)" }
+local FONTNAMES = B.FONT_NAMES
+local FONTKEYS = B.FONT_KEYS
 local CORNERS = { BOTTOMRIGHT = "Bottom right", BOTTOMLEFT = "Bottom left", TOPRIGHT = "Top right", TOPLEFT = "Top left", CENTER = "Center" }
 
 local SECTIONS = {
@@ -90,13 +91,14 @@ local SECTIONS = {
         { key = "edgeSize", kind = "slider", label = "Line border thickness", min = 1, max = 6, step = 1 },
         { key = "showTitleBar", kind = "check", label = "Show the title bar" },
         { key = "titleSize", kind = "slider", label = "Title size", min = 10, max = 22, step = 1 },
-        { key = "titleFont", kind = "cycle", label = "Title font", values = { "morpheus", "frizqt", "arial", "skurri" }, names = FONTNAMES },
+        { key = "titleFont", kind = "cycle", label = "Title font", values = FONTKEYS, names = FONTNAMES },
     } },
     { id = "slots", title = "Slots and text", scope = "all", rows = {
         { key = "slotStyle", kind = "cycle", label = "Slot background style", values = { "filled", "gradient", "texture", "game", "none" },
           names = { filled = "Flat color", gradient = "Gradient (two colors)", texture = "Textured tile", game = "The game's own slot art", none = "None (icons only)" } },
-        { key = "slotColor2", kind = "color", label = "Gradient: second color" },
-        { key = "slotTexture", kind = "cycle", label = "Textured tile", values = { "leather", "stone", "linen", "carbon", "brushed", "marble", "rock", "parchment" },
+        { key = "slotColor", kind = "color", label = "Slot color (flat fill, top of a gradient, or the tint of a tile)", when = { key = "slotStyle", "filled", "gradient", "texture" } },
+        { key = "slotColor2", kind = "color", label = "Gradient: second color (bottom of each slot)", when = { key = "slotStyle", "gradient" } },
+        { key = "slotTexture", kind = "cycle", label = "Textured tile", when = { key = "slotStyle", "texture" }, values = { "leather", "stone", "linen", "carbon", "brushed", "marble", "rock", "parchment" },
           names = { leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon", brushed = "Brushed metal", marble = "Marble", rock = "Rock", parchment = "Parchment" } },
         { key = "slotAlpha", kind = "slider", label = "Slot background opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "slotEmptyAlpha", kind = "slider", label = "Empty slots: share of that opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
@@ -114,7 +116,7 @@ local SECTIONS = {
         { key = "redUnusable", kind = "check", label = "Tint items red that you cannot use or equip" },
         { key = "keepAmmo", kind = "check", label = "Move arrows and bullets back into the quiver / ammo pouch" },
         { key = "junkAlpha", kind = "slider", label = "Grey item opacity", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
-        { key = "font", kind = "cycle", label = "Font for counts and the bottom line", values = { "frizqt", "arial", "morpheus", "skurri" }, names = FONTNAMES },
+        { key = "font", kind = "cycle", label = "Font for counts and the bottom line", values = FONTKEYS, names = FONTNAMES },
         { key = "countSize", kind = "slider", label = "Stack count size", min = 8, max = 18, step = 1 },
         { key = "countPos", kind = "cycle", label = "Stack count corner", values = { "BOTTOMRIGHT", "BOTTOMLEFT", "TOPRIGHT", "TOPLEFT", "CENTER" }, names = CORNERS },
         { key = "ilvl", kind = "check", label = "Show item level on gear" },
@@ -152,8 +154,12 @@ local SECTIONS = {
         { key = "showFooter", kind = "check", label = "Show the slot counter (gold is set below)" },
         { key = "counterMode", kind = "cycle", label = "Slot counter", values = { "used", "free", "freeonly", "none" },
           names = { used = "Used / total", free = "Free of total", freeonly = "Free only", none = "Hidden" } },
-        { key = "goldMode", kind = "cycle", label = "Gold display", values = { "icons", "text", "gold", "none" },
-          names = { icons = "Coin icons", text = "Colored 12g 34s 56c", gold = "Gold only", none = "Hidden" } },
+        { key = "goldMode", kind = "cycle", label = "Money display", values = { "icons", "text", "plain", "gold", "goldsilver", "short", "none" },
+          names = { icons = "Coin icons (gold, silver, copper pictures)", text = "Colored letters 12g 34s 56c", plain = "Plain white letters", gold = "Gold only", goldsilver = "Gold and silver only", short = "Short (12.3k)", none = "Hidden" } },
+        { key = "goldShowSilver", kind = "check", label = "Show silver" },
+        { key = "goldShowCopper", kind = "check", label = "Show copper" },
+        { key = "goldSep", kind = "cycle", label = "Thousands separator", values = { "comma", "space", "dot", "none" },
+          names = { comma = "1,234g", space = "1 234g", dot = "1.234g", none = "1234g" } },
         { key = "footerSize", kind = "slider", label = "Bottom line text size", min = 9, max = 18, step = 1 },
     } },
     { id = "window", title = "Bag window", scope = "inv", rows = {
@@ -166,7 +172,7 @@ local SECTIONS = {
         { key = "glowNew", kind = "check", label = "Glow new items until you point at them" },
         { key = "lockPos", kind = "check", label = "Lock window position (shows a padlock in the title bar)" },
         { key = "showMinimap", kind = "check", label = "Minimap button (right-click it for options)" },
-        { key = "followGreedUI", kind = "check", label = "Follow GreedUI's colors and look (only when GreedUI is installed)" },
+        { key = "followGreedUI", kind = "check", label = "Follow GreedUI: take its colors and look whenever its theme changes (only when GreedUI is installed)" },
         { key = "showReagent", kind = "check", label = "Show reagent bag (if this game has one)" },
         { key = "keyring", kind = "check", label = "Show keyring (if this character has one)" },
         { key = "sectionLabels", kind = "check", label = "Label and separate those extra sections" },
@@ -489,6 +495,16 @@ local function MakeRow(parent, tab, row)
         RefreshAll()
     end
     local w = { frame = c, row = row }
+    -- row.when = { key, values... }: only shown while that setting has one of the values
+    w.visible = function()
+        local wh = row.when
+        if not wh then return true end
+        local t = T()
+        local v = t[wh.key]
+        if v == nil then v = B.DEFAULTS[wh.key] end
+        for _, x in ipairs(wh) do if x == v then return true end end
+        return false
+    end
 
     if row.kind == "check" then
         c:SetHeight(24)
@@ -504,7 +520,10 @@ local function MakeRow(parent, tab, row)
         lbl:SetText(row.label)
         local btn = CreateFrame("Button", nil, c)
         btn:SetAllPoints(c)
-        btn:SetScript("OnClick", function() set(not get()) end)
+        btn:SetScript("OnClick", function()
+            set(not get())
+            if row.key == "followGreedUI" and get() and B.SyncGreedUI then B.SyncGreedUI(true) end
+        end)
         btn:SetScript("OnEnter", function() box:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 1) end)
         btn:SetScript("OnLeave", function() box:SetBackdropBorderColor(LINE[1], LINE[2], LINE[3], 1) end)
         w.refresh = function() tick:SetShown(get() and true or false) end
@@ -757,7 +776,7 @@ Relayout = function(tab)
             local open = OpenState(tab, it.sec, it.first)
             it.header.arrow:SetText(open and "-" or "+")
             for _, r in ipairs(it.rows) do
-                if open then
+                if open and r.visible() then
                     r.frame:ClearAllPoints()
                     r.frame:SetPoint("TOPLEFT", v.body, "TOPLEFT", 0, y)
                     r.frame:Show()
@@ -773,6 +792,7 @@ Relayout = function(tab)
 end
 
 RefreshAll = function()
+    if curTab and views[curTab] and Relayout then Relayout(curTab) end
     for _, v in pairs(views) do
         for _, it in ipairs(v.items) do
             for _, r in ipairs(it.rows) do if r.refresh then r.refresh() end end

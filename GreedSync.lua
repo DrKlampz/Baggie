@@ -1,15 +1,36 @@
 local ADDON, B = ...
 -- Optional link to GreedUI: when it is installed and "Follow GreedUI" is on, Baggie takes its colors from it.
 local function Sh(c, f) local k = f > 1 and (f - 1) * 0.03 or 0 return { math.min(1, c[1] * f + k), math.min(1, c[2] * f + k), math.min(1, c[3] * f + k) } end
-local function Sync(theme)
+-- GreedUI's look is applied when its theme changes (or when you press Sync in GreedUI), not at every login,
+-- so colors you change in Baggie's own options stay until GreedUI's theme changes again.
+local function Signature(theme)
+    local parts = {}
+    for k, v in pairs(theme) do
+        if type(v) == "table" then
+            local t = {}
+            for i = 1, #v do t[#t + 1] = string.format("%.3f", tonumber(v[i]) or 0) end
+            parts[#parts + 1] = k .. "=" .. table.concat(t, ",")
+        elseif type(v) ~= "function" then
+            parts[#parts + 1] = k .. "=" .. tostring(v)
+        end
+    end
+    table.sort(parts)
+    return table.concat(parts, ";")
+end
+local function Sync(theme, force)
     if not (B.db and B.db.followGreedUI ~= false and theme) then return end
     local d = B.db
+    local sig = Signature(theme)
+    if not force and d.greedSig == sig then return end
+    d.greedSig = sig
     if theme.bg then
         d.bgColor = { theme.bg[1], theme.bg[2], theme.bg[3] }
         d.bgStyle, d.bgNoTint = "solid", false
         d.slotStyle, d.slotColor, d.slotColor2 = "filled", Sh(theme.bg, 2.2), Sh(theme.bg, 3)
         d.slotQualityTint = false
     end
+    -- the same font as GreedUI and the rest of the add-ons (a file path; Baggie's own choices are the same fonts)
+    if type(theme.font) == "string" and theme.font ~= "" then d.font, d.titleFont = theme.font, theme.font end
     d.alpha = math.max(0.9, tonumber(theme.bgAlpha) or 0.95)
     -- the master background: a GreedUI texture, a game texture, or plain color
     if theme.bgPath then
@@ -29,7 +50,7 @@ local function Sync(theme)
     if B.BankUI and B.BankUI.ApplyLook then B.BankUI.ApplyLook() end
     if B.RefreshBankGlows then B.RefreshBankGlows() end
 end
-B.SyncGreedUI = function() local G = _G.GreedUI if G and G.GetTheme then Sync(G.GetTheme("Baggie")) end end
+B.SyncGreedUI = function(force) local G = _G.GreedUI if G and G.GetTheme then Sync(G.GetTheme("Baggie"), force) end end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
@@ -38,7 +59,7 @@ f:SetScript("OnEvent", function()
     if not G then return end
     if G.RegisterPlugin then G.RegisterPlugin("Baggie", {
         open = function() if B.Options and B.Options.Toggle then B.Options.Toggle() end end,
-        refresh = B.SyncGreedUI,
+        refresh = function() B.SyncGreedUI(true) end,
     }) end
     if G.OnTheme then G.OnTheme(function() Sync(G.GetTheme("Baggie")) end) end
     -- Baggie's own settings may not be loaded yet at this moment: take the look again a moment later

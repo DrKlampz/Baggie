@@ -25,17 +25,7 @@ local function BankGap()
     return gap
 end
 
-local function MoneyText(money)
-    local gm = B.db.goldMode
-    local g, s, c = math.floor(money / 10000), math.floor(money / 100) % 100, money % 100
-    if gm == "none" then return "" end
-    if gm == "gold" then
-        return tostring(g):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "") .. "|cffffd700g|r"
-    elseif gm == "icons" and _G.GetCoinTextureString then
-        return _G.GetCoinTextureString(money)
-    end
-    return ("|cffffd700%dg|r |cffc7c7cf%ds|r |cffeda55f%dc|r"):format(g, s, c)
-end
+local function MoneyText(money) return B.MoneyString(money) end
 
 local function Label(parent, size)
     local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")

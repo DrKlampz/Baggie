@@ -11,6 +11,7 @@
 
 IssueLog.lua
 Core.lua
+Fonts.lua
 Roster.lua
 Layout.lua
 Frame.lua
