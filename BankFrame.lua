@@ -520,14 +520,16 @@ local function BankCreate()
             -- ask the way the game's own bank does (its confirm popup shows the price), else buy directly
             local dlg = _G.StaticPopupDialogs and _G.StaticPopupDialogs["CONFIRM_BUY_BANK_TAB"]
             if dlg and _G.StaticPopup_Show then
-                local okp = pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_TAB", nil, nil, { bankType = bankType })
-                if okp then
+                local okp, shown = pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_TAB", nil, nil, { bankType = bankType })
+                if not shown then B.Print("Buy tab: the game's confirm window did not open.") end
+                if okp and shown then
                     if _G.C_Timer then
                         _G.C_Timer.After(2.5, function() SoonBank() end)
                     end
                     return
                 end
             end
+            B.Print("Buy tab: this game has no tab confirm window, trying a direct purchase.")
             Buy()
         elseif _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
     end)
