@@ -489,48 +489,16 @@ local function BankCreate()
     end
     bw.buy = Button(bw, "Buy bag slot", 90, function()
         if bw.buy.tabbed then
-            local CB, E = _G.C_Bank, _G.Enum
-            if not (CB and CB.PurchaseBankTab and E and E.BankType) then return end
-            local bankType = E.BankType.Character
-            local function Count()
-                local ok, ids = pcall(CB.FetchPurchasedBankTabIDs, bankType)
-                return ok and type(ids) == "table" and #ids or -1
-            end
-            local before = Count()
-            local lastErr
-            local f = B.buyWatch or CreateFrame("Frame")
-            B.buyWatch = f
-            f:RegisterEvent("UI_ERROR_MESSAGE")
-            f:SetScript("OnEvent", function(_, _, _, msg) lastErr = msg end)
-            local function Buy()
-                local ok, err = pcall(CB.PurchaseBankTab, bankType)
-                if not ok then lastErr = tostring(err) end
-                if _G.C_Timer then
-                    _G.C_Timer.After(0.5, function() if SoonBank then SoonBank() end end)
-                    _G.C_Timer.After(2.0, function()
-                        if SoonBank then SoonBank() end
-                        f:UnregisterEvent("UI_ERROR_MESSAGE")
-                        if Count() == before then
-                            B.Print("The game did not buy the tab" .. (lastErr and (": " .. tostring(lastErr)) or ". Check you have enough gold and are standing at the banker."))
-                            if B.Issue then B.Issue("blocked", "buy bank tab", lastErr or "no tab was added") end
-                        end
-                    end)
-                end
-            end
-            -- ask the way the game's own bank does (its confirm popup shows the price), else buy directly
-            local dlg = _G.StaticPopupDialogs and _G.StaticPopupDialogs["CONFIRM_BUY_BANK_TAB"]
-            if dlg and _G.StaticPopup_Show then
-                local okp, shown = pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_TAB", nil, nil, { bankType = bankType })
-                if not shown then B.Print("Buy tab: the game's confirm window did not open.") end
-                if okp and shown then
-                    if _G.C_Timer then
-                        _G.C_Timer.After(2.5, function() SoonBank() end)
-                    end
-                    return
-                end
-            end
-            B.Print("Buy tab: this game has no tab confirm window, trying a direct purchase.")
-            Buy()
+            -- the game only lets its own bank window buy a tab (calls from add-ons are blocked), so show
+            -- that window briefly; Baggie hides it again once the tab is bought
+            local f = _G.BankFrame
+            if not f then B.Print("The game's bank window is not available.") return end
+            if InCombatLockdown() then B.Print("Can't do that in combat.") return end
+            B.nativeBuy = true
+            pcall(f.SetParent, f, UIParent)
+            pcall(f.SetFrameStrata, f, "FULLSCREEN_DIALOG")
+            pcall(f.Show, f)
+            B.Print("The game's bank window is open: click its + tab to buy the next tab. Baggie hides it again afterwards.")
         elseif _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
     end)
     bw.buy:SetPoint("BOTTOMRIGHT", bw, "BOTTOMRIGHT", -12, 30)
@@ -593,6 +561,10 @@ end
 
 ev:SetScript("OnEvent", function(_, event)
     if not B.db then return end
+    if B.nativeBuy and (event == "BANK_TABS_CHANGED" or event == "BANK_TAB_SETTINGS_UPDATED") and bankOpen then
+        B.nativeBuy = nil
+        C_Timer.After(0.6, function() if bankOpen and not InCombatLockdown() then HideBlizzardBank() end end)
+    end
     if event == "BANKFRAME_OPENED" then
         Dbg("BANKFRAME_OPENED received")
         OpenBankWindow("BANKFRAME_OPENED")

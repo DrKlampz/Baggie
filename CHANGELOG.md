@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Bank: buying a bank tab now goes through the game's own confirm window (it shows the price), and if the game refuses, Baggie tells you why and records it in the issue log.
+- Bank: the game blocks add-ons from buying a bank tab, so Buy tab now opens the game's own bank window for the purchase and hides it again afterwards.
 
 ## v0.6.3
 - Fix: characters with two-part names no longer share saved slots with each other.
