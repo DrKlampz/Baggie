@@ -570,7 +570,7 @@ ev:SetScript("OnEvent", function(_, event)
     if B.nativeBuy and (event == "BANK_TABS_CHANGED" or event == "BANK_TAB_SETTINGS_UPDATED") and bankOpen then
         B.nativeBuy = nil
         -- hiding the game's window would tell the game the banker conversation is over, so just make it invisible
-        C_Timer.After(0.6, function()
+        C_Timer.After(0, function()
             local f = _G.BankFrame
             if bankOpen and f and not InCombatLockdown() then
                 pcall(f.SetAlpha, f, 0)
