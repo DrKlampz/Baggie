@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.6.6
+- Fix: new loot (auto loot, pickups, deliveries) no longer settles in a slot you saved for a different item. It is moved to the first free slot that is not saved for something else, and the first-free-slot setting now skips saved spots too.
+
 ## v0.6.5
 - Fix: the Buy tab button in the bank window is no longer hidden behind the window background.
 

@@ -953,17 +953,16 @@ do
         if _G[n] then hooksecurefunc(n, Touch) end
     end
 
+    -- every slot in the window's own numbering; c[5] marks slots of special bags (quivers, herb bags...)
     local function Scan()
         local cells = {}
         local gf = (C and C.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
         for _, bag in ipairs(B.BagIDs()) do
-            local ok = true
-            if gf and bag > 0 then local _, kind = gf(bag) if kind and kind ~= 0 then ok = false end end
-            if ok then
-                for sl = 1, B.NumSlots(bag) do
-                    local _, _, _, _, link = B.SlotInfo(bag, sl)
-                    cells[#cells + 1] = { bag, sl, link ~= nil, link }
-                end
+            local special = false
+            if gf and bag > 0 then local _, kind = gf(bag) if kind and kind ~= 0 then special = true end end
+            for sl = 1, B.NumSlots(bag) do
+                local _, _, _, _, link = B.SlotInfo(bag, sl)
+                cells[#cells + 1] = { bag, sl, link ~= nil, link, special }
             end
         end
         return cells
@@ -972,7 +971,7 @@ do
     local function Snapshot(cells)
         local s, n = {}, 0
         for _, c in ipairs(cells) do
-            if c[3] then s[c[1] .. ":" .. c[2]] = true n = n + 1 end
+            if c[3] and not c[5] then s[c[1] .. ":" .. c[2]] = true n = n + 1 end
         end
         return s, n
     end
@@ -985,29 +984,60 @@ do
         local snap, n = Snapshot(cells)
         local old, oldN = prev, prev and prev.n or 0
         prev = snap prev.n = n
-        if not B.db.fillFront or not old then return end
-        if n <= oldN then return end                                   -- nothing new arrived
+        if not old or n <= oldN then return end                         -- nothing new arrived
         local now = (_G.GetTime and _G.GetTime()) or 0
         if now - lastUser < 1.5 then return end                        -- you were moving things yourself
         if (_G.GetCursorInfo and _G.GetCursorInfo()) or (_G.InCombatLockdown and _G.InCombatLockdown()) then return end
-        local free = B.FirstFreeCell(cells)
-        if not free then return end
-        for i = #cells, free + 1, -1 do                                -- new items, last slot first
-            local c = cells[i]
-            local key = c[1] .. ":" .. c[2]
-            if c[3] and not old[key] then
-                local _, _, locked = B.SlotInfo(c[1], c[2])
-                if not locked then
-                    local t = cells[free]
-                    busy = true
-                    B.Pickup(c[1], c[2])
-                    B.Pickup(t[1], t[2])
-                    if _G.GetCursorInfo and _G.GetCursorInfo() then B.Pickup(c[1], c[2]) end
-                    _G.C_Timer.After(0.3, function() busy = false prev = nil end)
-                end
-                return
+
+        -- spots you saved for an item stay empty for it: new loot never settles in one saved for another item
+        local reserved = {}
+        local okp, pins = pcall(B.Pins)
+        if okp and type(pins) == "table" then
+            for id, p in pairs(pins) do
+                for _, cell in ipairs(B.Layout.CellsOf(p)) do reserved[cell] = id end
             end
         end
+        local taken = {}
+        local function FreeCell()
+            for i, c in ipairs(cells) do
+                if not c[3] and not c[5] and not reserved[i] and not taken[i] then return i end
+            end
+        end
+        local moves = {}
+        local first = FreeCell()
+        for i = #cells, 1, -1 do                                       -- new items, last slot first
+            local c = cells[i]
+            local key = c[1] .. ":" .. c[2]
+            if c[3] and not c[5] and not old[key] then
+                local _, _, locked, _, _, id = B.SlotInfo(c[1], c[2])
+                local holder = reserved[i]
+                local misplaced = holder ~= nil and holder ~= id
+                local front = B.db.fillFront and first and i > first
+                if not locked and (misplaced or front) then
+                    local t = FreeCell()
+                    if t and t ~= i and (misplaced or t < i) then
+                        taken[t] = true
+                        moves[#moves + 1] = { c[1], c[2], cells[t][1], cells[t][2] }
+                    end
+                end
+            end
+        end
+        if #moves == 0 then return end
+        busy = true
+        local k = 0
+        local function Step()
+            k = k + 1
+            local m = moves[k]
+            if not m then
+                _G.C_Timer.After(0.3, function() busy = false prev = nil end)
+                return
+            end
+            B.Pickup(m[1], m[2])
+            B.Pickup(m[3], m[4])
+            if _G.GetCursorInfo and _G.GetCursorInfo() then B.Pickup(m[1], m[2]) end
+            _G.C_Timer.After(0.25, Step)
+        end
+        Step()
     end))
 end
 
