@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: the Buy tab button in the bank window is no longer hidden behind the window background.
+
 ## v0.6.4
 - Money display rebuilt: Coin icons now show real gold, silver and copper pictures (before they looked the same as the colored letters). New: plain white letters, gold and silver only, short numbers (12.3k), options to hide silver or copper, and a thousands separator.
 - Fonts: the font pack now ships inside Baggie (over 100 fonts) for the title, counts and bottom line, and Baggie follows GreedUI's font.

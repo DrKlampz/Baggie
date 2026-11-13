@@ -495,6 +495,7 @@ local function BankCreate()
         elseif _G.StaticPopup_Show then pcall(_G.StaticPopup_Show, "CONFIRM_BUY_BANK_SLOT") end
     end)
     bw.buy:SetPoint("BOTTOMRIGHT", bw, "BOTTOMRIGHT", -12, 30)
+    bw.buy:SetFrameLevel(bw:GetFrameLevel() + 40)   -- above the slot grid and the window background
     bw.buy:Hide()
 end
 
