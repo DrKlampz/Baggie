@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.4
 - Money display rebuilt: Coin icons now show real gold, silver and copper pictures (before they looked the same as the colored letters). New: plain white letters, gold and silver only, short numbers (12.3k), options to hide silver or copper, and a thousands separator.
 - Fonts: the font pack now ships inside Baggie (over 100 fonts) for the title, counts and bottom line, and Baggie follows GreedUI's font.
 - Colors: the slot options only show what applies to the chosen slot style (flat color, gradient or tile), the textured tiles show their texture instead of a flat grey, and your own color changes are no longer overwritten at every login by GreedUI. GreedUI's look is applied when its theme changes.
