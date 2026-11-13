@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.5
 - Fix: the Buy tab button in the bank window is no longer hidden behind the window background.
 
 ## v0.6.4
