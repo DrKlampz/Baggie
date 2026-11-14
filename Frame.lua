@@ -423,6 +423,20 @@ local function PinnedItemAtCell(c)
     end
 end
 
+-- Freeing a saved spot: the item is drawn in that cell, so also put it there for real (if that
+-- bag slot is empty), then the window and the bags agree and nothing jumps when the spot is freed.
+local function SettleBeforeFree(c, id)
+    if not (id and c) or (_G.InCombatLockdown and _G.InCombatLockdown()) then return end
+    if _G.GetCursorInfo and _G.GetCursorInfo() then return end
+    local x = lastCells[c]
+    if not x or x.kind ~= "slot" then return end
+    local from, to = B.slotsNow and B.slotsNow[x.index], B.slotsNow and B.slotsNow[c]
+    if not (from and to) or x.index == c or to.itemID then return end
+    B.Pickup(from.bag, from.slot)
+    B.Pickup(to.bag, to.slot)
+    if _G.GetCursorInfo and _G.GetCursorInfo() then B.Pickup(from.bag, from.slot) end
+end
+
 function F.CellClick(c, mouse)
     if not c then B.Print("saved spots only work in the main bags, not the reagent bag or keyring.") return end
     local pins = B.Pins()
@@ -431,6 +445,7 @@ function F.CellClick(c, mouse)
         local held = PinnedItemAtCell(c)
         if held then
             local name = pins[held].name or "item"
+            SettleBeforeFree(c, held)
             B.Layout.RemoveSpot(pins, held, c)
             B.Print("freed the saved spot for " .. name)
             F.Refresh()
@@ -441,6 +456,7 @@ function F.CellClick(c, mouse)
     if not id then B.Print("Alt+click an item to save it to the spot it is in.") return end
     if kind == "ghost" or (pins[id] and B.Layout.HasCell(pins[id], c)) then
         local name = pins[id] and pins[id].name or "item"
+        SettleBeforeFree(c, id)
         B.Layout.RemoveSpot(pins, id, c)
         B.Print("freed the saved spot for " .. name)
         F.Refresh()
