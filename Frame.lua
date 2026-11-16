@@ -627,6 +627,8 @@ local function Decorate(btn)
     btn.glow:SetSize(CELL * 1.75, CELL * 1.75)
     btn.glow:Hide()
     if btn.HookScript then
+        btn:HookScript("OnEnter", function(self) F.hoverBtn = self end)
+        btn:HookScript("OnLeave", function(self) if F.hoverBtn == self then F.hoverBtn = nil end end)
         btn:HookScript("OnEnter", function(self)
             if not self.baggieNew then return end
             self.baggieNew = nil
@@ -903,6 +905,24 @@ function F.Refresh()
     if not win or not B.db then return end
     if not win:IsShown() then return end
     local text = (win.search:GetText() or ""):lower()
+    -- Redrawing the slots (and hiding/showing them) can drop the tooltip of the item the mouse is on.
+    -- Remember that, and bring the tooltip back afterwards.
+    local hadTip = false
+    if _G.GameTooltip and GameTooltip:IsShown() and GameTooltip.GetOwner then
+        local own = GameTooltip:GetOwner()
+        for _, b in pairs(buttons) do if b == own then hadTip = true break end end
+    end
+    if F.hoverBtn and F.hoverBtn:IsShown() and F.hoverBtn:IsMouseOver() then hadTip = true end
+    local function RestoreTip(had)
+        if not had then return end
+        for _, b in pairs(buttons) do
+            if b:IsShown() and b:IsMouseOver() then
+                local fn = b:GetScript("OnEnter")
+                if fn then pcall(fn, b) end
+                break
+            end
+        end
+    end
     local slots = B.ScanSlots()
     pcall(SnapshotArrivals, slots)
     -- one slot that fails to draw must never stop the rest (or the gold line) from showing
@@ -918,29 +938,15 @@ function F.Refresh()
         -- only refresh pictures in combat; moving buttons waits
         pcall(Footer, B.slotsNow or slots)
         DrawAll()
+        RestoreTip(hadTip)
         relayoutAfterCombat = true
         return
-    end
-    -- Relayout hides and re-shows every slot, which also drops the tooltip of the item the mouse is on.
-    -- Remember that, and bring the tooltip back afterwards.
-    local hadTip = false
-    if _G.GameTooltip and GameTooltip:IsShown() and GameTooltip.GetOwner then
-        local own = GameTooltip:GetOwner()
-        for _, b in pairs(buttons) do if b == own then hadTip = true break end end
     end
     local okR, errR = pcall(Relayout, slots, text)
     if not okR then B.lastDrawError = tostring(errR) if not B.drawErrShown then B.drawErrShown = true B.Print("layout failed: " .. B.lastDrawError) end end
     pcall(Footer, slots)
     DrawAll()
-    if hadTip then
-        for _, b in pairs(buttons) do
-            if b:IsShown() and b:IsMouseOver() then
-                local fn = b:GetScript("OnEnter")
-                if fn then pcall(fn, b) end
-                break
-            end
-        end
-    end
+    RestoreTip(hadTip)
     glowArmed = true    -- from now on, an item that wasn't in its slot before counts as new
 end
 
