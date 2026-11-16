@@ -1,7 +1,7 @@
 # Changelog
 
 ## v0.6.8
-- Fix: the item tooltip no longer vanishes while you are hovering a bag item. Any bag change (a cooldown, a stat update, loot, a durability tick in a fight) redrew the slots and could drop the tooltip; it now comes right back, in and out of combat.
+- Fix: the item tooltip no longer vanishes while you are hovering a bag item. Any bag change (a cooldown, a stat update, loot, a durability tick in a fight) redrew the slots and could drop the tooltip; it now comes right back, in and out of combat. The tooltip is also put back if it disappears on its own while the mouse rests on an item.
 
 ## v0.6.7
 - Fix: freeing a saved spot no longer makes the item jump. The item is first put into the bag slot it is drawn in, so the window always matches your real bags.

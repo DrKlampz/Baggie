@@ -242,6 +242,26 @@ do
 end
 function B.ArmGlows() glowArmed = true end
 
+-- Safety net: if the mouse rests on a bag item and its tooltip has gone (the game or another add-on
+-- dropped it), put it back. Checked a few times a second, only while a bag item is hovered.
+do
+    local wf = CreateFrame("Frame")
+    local acc = 0
+    wf:SetScript("OnUpdate", function(_, dt)
+        local b = F.hoverBtn
+        if not b then return end
+        acc = acc + dt
+        if acc < 0.25 then return end
+        acc = 0
+        if not (_G.GameTooltip and b:IsShown() and b:IsMouseOver()) then return end
+        if GameTooltip:IsShown() then return end
+        if _G.GetCursorInfo and _G.GetCursorInfo() then return end
+        if not b.itemID then return end
+        local fn = b:GetScript("OnEnter")
+        if fn then pcall(fn, b) end
+    end)
+end
+
 -- red tint on items this character cannot use or equip. The item tooltip already shows the reason in red
 -- (level, class, armor type, skill), so read it from there once per item and remember the answer.
 local scanTip
