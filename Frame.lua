@@ -921,10 +921,26 @@ function F.Refresh()
         relayoutAfterCombat = true
         return
     end
+    -- Relayout hides and re-shows every slot, which also drops the tooltip of the item the mouse is on.
+    -- Remember that, and bring the tooltip back afterwards.
+    local hadTip = false
+    if _G.GameTooltip and GameTooltip:IsShown() and GameTooltip.GetOwner then
+        local own = GameTooltip:GetOwner()
+        for _, b in pairs(buttons) do if b == own then hadTip = true break end end
+    end
     local okR, errR = pcall(Relayout, slots, text)
     if not okR then B.lastDrawError = tostring(errR) if not B.drawErrShown then B.drawErrShown = true B.Print("layout failed: " .. B.lastDrawError) end end
     pcall(Footer, slots)
     DrawAll()
+    if hadTip then
+        for _, b in pairs(buttons) do
+            if b:IsShown() and b:IsMouseOver() then
+                local fn = b:GetScript("OnEnter")
+                if fn then pcall(fn, b) end
+                break
+            end
+        end
+    end
     glowArmed = true    -- from now on, an item that wasn't in its slot before counts as new
 end
 
