@@ -242,6 +242,25 @@ do
 end
 function B.ArmGlows() glowArmed = true end
 
+-- Who hides the tooltip? When it goes away while the mouse is still on a bag item, the call stack is written
+-- to the issue log (/issues) so the add-on responsible shows up by name.
+do
+    local logged = 0
+    local function Trace(how, anyOwner)
+        local b = F.hoverBtn
+        if not (b and b:IsShown() and b:IsMouseOver()) or logged >= 6 then return end
+        if not anyOwner and not (_G.GameTooltip and GameTooltip:IsOwned(b)) then return end
+        logged = logged + 1
+        local st = (_G.debugstack and debugstack(3, 8, 0)) or "no stack"
+        if B.Issue then pcall(B.Issue, "warn", "tooltip hidden while hovering (" .. how .. ")", (tostring(st):gsub("\n", " | "))) end
+    end
+    if _G.GameTooltip then
+        pcall(hooksecurefunc, GameTooltip, "Hide", function() Trace("Hide") end)
+        if GameTooltip.FadeOut then pcall(hooksecurefunc, GameTooltip, "FadeOut", function() Trace("FadeOut") end) end
+        if GameTooltip.SetOwner then pcall(hooksecurefunc, GameTooltip, "SetOwner", function(_, o) if o ~= F.hoverBtn then Trace("SetOwner elsewhere", true) end end) end
+    end
+end
+
 -- Safety net: if the mouse rests on a bag item and its tooltip has gone (the game or another add-on
 -- dropped it), put it back. Checked a few times a second, only while a bag item is hovered.
 do
