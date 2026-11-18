@@ -16,6 +16,24 @@ local relayoutAfterCombat = false
 
 local function InCombat() return _G.InCombatLockdown and _G.InCombatLockdown() end
 
+-- Open and close that still work in combat. The bag slots are secure buttons, which makes the window
+-- protected: the game refuses to Show or Hide it in combat. So the window stays shown all the time and
+-- "closed" means invisible with the mouse off; opening and closing in combat only changes its alpha.
+local softClosed = false
+local pendingOpen = false
+local function CombatSafe() return not B.db or B.db.combatSafe ~= false end
+function F.IsOpen()
+    local w = B.window
+    if not (w and w:IsShown()) then return false end
+    return not softClosed
+end
+local function SpecialFrame(on)
+    local t = _G.UISpecialFrames
+    if not t then return end
+    for i = #t, 1, -1 do if t[i] == "BaggieFrame" then table.remove(t, i) end end
+    if on then table.insert(t, "BaggieFrame") end
+end
+
 ----------------------------------------------------------------------
 -- Item names and search
 ----------------------------------------------------------------------
@@ -942,7 +960,7 @@ end
 
 function F.Refresh()
     if not win or not B.db then return end
-    if not win:IsShown() then return end
+    if not F.IsOpen() then return end
     local text = (win.search:GetText() or ""):lower()
     -- Redrawing the slots (and hiding/showing them) can drop the tooltip of the item the mouse is on.
     -- Remember that, and bring the tooltip back afterwards.
@@ -1386,8 +1404,14 @@ local function Create()
     win.money:SetPoint("BOTTOMRIGHT", -PAD, 10)
 
     win:SetScript("OnShow", function() F.Refresh() end)
-    win:SetScript("OnHide", function() editMode, pick = false, nil F.UpdateOverlays() end)
-    table.insert(_G.UISpecialFrames, "BaggieFrame")
+    win:SetScript("OnHide", function()
+        editMode, pick = false, nil
+        F.UpdateOverlays()
+        -- something hid the window for real (Escape, another add-on): put it back on standby for combat
+        if CombatSafe() and not InCombat() and C_Timer then
+            C_Timer.After(0, function() if win and not win:IsShown() and not InCombat() and CombatSafe() then F.Arm() end end)
+        end
+    end)
     win:Hide()
 end
 
@@ -1471,14 +1495,84 @@ end
 F.Decorate, F.UpdateButton, F.QualityColor = Decorate, UpdateButton, QualityColor
 F.PinCue = PinCue
 
-function F.Open()
-    if not win then return end
-    if not win:IsShown() then win:Show() else F.Refresh() end
+local function SetMouse(on)
+    win:EnableMouse(on)
+    for _, b in pairs(buttons) do b:EnableMouse(on) end
+    for _, g in pairs(ghosts) do g:EnableMouse(on) end
 end
-function F.Close() if win and win:IsShown() then win:Hide() end end
-function F.Toggle()
+
+-- standby: shown for real, invisible, mouse off
+function F.Arm()
+    if not win or InCombat() then return end
+    softClosed = true
+    win:SetAlpha(0)
+    SetMouse(false)
+    SpecialFrame(false)
+    if not win:IsShown() then win:Show() end
+end
+
+function F.SetOpen(want)
     if not win then return end
-    if win:IsShown() then win:Hide() else win:Show() end
+    want = want and true or false
+    if want == F.IsOpen() then
+        if want then F.Refresh() end
+        return
+    end
+    if not CombatSafe() then
+        if want then win:Show() else win:Hide() end
+        return
+    end
+    if InCombat() then
+        if win:IsShown() then
+            softClosed = not want
+            win:SetAlpha(want and 1 or 0)
+            SpecialFrame(want)
+            if want then F.Refresh() end
+        elseif want then
+            local ok = pcall(win.Show, win)
+            if not ok or not win:IsShown() then
+                pendingOpen = true
+                B.Print("can't open in combat this time; it will open when combat ends.")
+            end
+        end
+        return
+    end
+    if want then
+        softClosed = false
+        win:SetAlpha(1)
+        SetMouse(true)
+        SpecialFrame(true)
+        if not win:IsShown() then win:Show() else F.Refresh() end
+    else
+        F.Arm()
+    end
+end
+function F.Open() F.SetOpen(true) end
+function F.Close() F.SetOpen(false) end
+function F.Toggle() F.SetOpen(not F.IsOpen()) end
+
+-- the bag keys click a plain button of ours instead of running the game's bag functions, which
+-- fail in combat once the game's own bag frames have been moved out of the way
+local binder, lastKey = nil, 0
+function F.BindKeys()
+    if InCombat() then return end
+    if not binder then
+        binder = CreateFrame("Button", "BaggieToggleButton", UIParent)
+        binder:SetScript("OnClick", function()
+            local now = GetTime()
+            if now - lastKey < 0.15 then return end
+            lastKey = now
+            F.Toggle()
+        end)
+    end
+    if _G.ClearOverrideBindings then ClearOverrideBindings(binder) end
+    if not (B.db and B.db.enabled and CombatSafe()) then return end
+    for _, cmd in ipairs({ "OPENALLBAGS", "TOGGLEBACKPACK", "TOGGLEBAG1", "TOGGLEBAG2", "TOGGLEBAG3", "TOGGLEBAG4" }) do
+        local k1, k2 = GetBindingKey(cmd)
+        for _, k in ipairs({ k1 or false, k2 or false }) do
+            if k then pcall(SetOverrideBindingClick, binder, true, k, "BaggieToggleButton") end
+        end
+    end
 end
 
 ----------------------------------------------------------------------
@@ -1528,7 +1622,7 @@ function F.ApplyOverrides()
         local stateTime, stateWas = -1, false
         local function WasShown()
             local now = GetTime()
-            if now ~= stateTime then stateTime = now stateWas = (win and win:IsShown()) and true or false end
+            if now ~= stateTime then stateTime = now stateWas = F.IsOpen() and true or false end
             return stateWas
         end
         local function onToggle()
@@ -1555,17 +1649,31 @@ function F.Setup()
     F.ApplyLook()
     RestorePosition()
     F.ApplyOverrides()
+    if CombatSafe() and not InCombat() then F.Arm() end
+    F.BindKeys()
     if B.Minimap then B.Minimap.Create() end
 end
 
 for _, e in ipairs({ "BAG_UPDATE", "BAG_UPDATE_DELAYED", "BAG_UPDATE_COOLDOWN", "ITEM_LOCK_CHANGED",
                      "PLAYER_MONEY", "BAG_NEW_ITEMS_UPDATED", "UNIT_INVENTORY_CHANGED" }) do
-    B.On(e, B.Safe(e, function() if win and win:IsShown() then Schedule() end end))
+    B.On(e, B.Safe(e, function() if win and F.IsOpen() then Schedule() end end))
 end
 B.On("PLAYER_REGEN_ENABLED", B.Safe("regen", function()
+    if win and CombatSafe() then
+        if pendingOpen then pendingOpen = false F.SetOpen(true) end
+        if not win:IsShown() then F.Arm() else SetMouse(F.IsOpen()) end
+        F.BindKeys()
+    end
     if relayoutAfterCombat then relayoutAfterCombat = false F.Refresh() end
 end))
-B.On("PLAYER_ENTERING_WORLD", B.Safe("enter", function() if win then F.ApplyOverrides() end end))
+B.On("PLAYER_ENTERING_WORLD", B.Safe("enter", function()
+    if win then
+        F.ApplyOverrides()
+        if CombatSafe() and not InCombat() and not win:IsShown() then F.Arm() end
+        F.BindKeys()
+    end
+end))
+B.On("UPDATE_BINDINGS", B.Safe("bindings", function() if win then F.BindKeys() end end))
 
 -- vendor / mail / auction house / bank: open on arrival, close on leaving
 local function Arrive(isMerchant)
@@ -1574,13 +1682,13 @@ local function Arrive(isMerchant)
         merchantOpen = true
         win.sellBtn:SetShown(B.db.sellButton)
     end
-    if B.db.autoOpen and not win:IsShown() then openedByUs = true win:Show() end
+    if B.db.autoOpen and not F.IsOpen() then openedByUs = true F.SetOpen(true) end
     if isMerchant and B.db.autoSell then F.SellJunk() end
 end
 local function Leave(isMerchant)
     if not win then return end
     if isMerchant then merchantOpen = false win.sellBtn:Hide() end
-    if openedByUs and win:IsShown() then win:Hide() end
+    if openedByUs and F.IsOpen() then F.SetOpen(false) end
     openedByUs = false
 end
 B.On("MERCHANT_SHOW", B.Safe("merchant", function() Arrive(true) end))
@@ -1593,7 +1701,7 @@ B.On("AUCTION_HOUSE_SHOW", B.Safe("ah", function() Arrive(false) end))
 B.On("AUCTION_HOUSE_CLOSED", B.Safe("ahx", function() Leave(false) end))
 
 B.On("MODIFIER_STATE_CHANGED", B.Safe("mod", function()
-    if (win and win:IsShown()) or (B.BankUI and B.BankUI.IsOpen and B.BankUI.IsOpen()) then F.UpdateOverlays() end
+    if (win and F.IsOpen()) or (B.BankUI and B.BankUI.IsOpen and B.BankUI.IsOpen()) then F.UpdateOverlays() end
 end))
 B.On("ADDON_ACTION_BLOCKED", function(addon, func)
     if addon == ADDON_NAME and B.db then
