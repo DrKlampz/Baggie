@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: the bag window and the bag keys now work in combat. The bag slots are secure buttons, which makes the window protected, so the game refused to show or hide it in a fight. The window now stays on standby (shown, invisible, mouse off) and only fades in or out in combat, and the bag keys click a button of Baggie's own instead of running the game's bag functions. Slots opened for the first time in combat can be seen but not clicked until combat ends. To go back to the old behaviour: /run BaggieDB.combatSafe=false then /reload.
+
 ## v0.6.8
 - Fix: the item tooltip no longer vanishes while you are hovering a bag item. Any bag change (a cooldown, a stat update, loot, a durability tick in a fight) redrew the slots and could drop the tooltip; it now comes right back, in and out of combat. The tooltip is also put back if it disappears on its own while the mouse rests on an item.
 
