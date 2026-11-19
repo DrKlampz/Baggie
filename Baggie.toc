@@ -20,5 +20,6 @@ Glow.lua
 Minimap.lua
 Options.lua
 BankFrame.lua
+Look.lua
+LookSetup.lua
 GreedSync.lua
-ShareLook.lua

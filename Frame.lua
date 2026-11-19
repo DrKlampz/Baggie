@@ -1114,7 +1114,7 @@ end
 -- optional extra trim: "gilded" is an inner gold line with corner studs, "royal" adds a second line,
 -- diamond corners and a rule under the title
 function F.StyleFlair(w, edge, inset)
-    local mode = B.db.flair or "none"
+    local mode = "none"   -- the trim comes from the Look system now (Look > Border > Flair)
     local fx = w.flairFx
     if not fx then
         fx = { line = {}, line2 = {}, stud = {}, rule = w:CreateTexture(nil, "OVERLAY", nil, 2) }
@@ -1212,6 +1212,7 @@ function F.ApplyLook()
     F.ApplyScale()
     pcall(F.UpdateLockCue)
     if B.BankUI then B.BankUI.ApplyLook() end
+    if B.WinLook then B.WinLook.Apply() end
 end
 
 function F.ApplyScale() if win then win:SetScale(B.db.scale or 1) end end
@@ -1235,6 +1236,7 @@ local function Create()
     if win then return end
     win = CreateFrame("Frame", "BaggieFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     B.window = win
+    if B.WinLook then B.WinLook.Attach("bags", win) end
     win:SetFrameStrata("HIGH")
     win:SetToplevel(true)   -- clicking raises the window with all its contents above other addon windows
     win:SetClampedToScreen(true)

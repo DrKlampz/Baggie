@@ -57,10 +57,6 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
     local G = _G.GreedUI
     if not G then return end
-    if G.RegisterPlugin then G.RegisterPlugin("Baggie", {
-        open = function() if B.Options and B.Options.Toggle then B.Options.Toggle() end end,
-        refresh = function() B.SyncGreedUI(true) end,
-    }) end
     if G.OnTheme then G.OnTheme(function() Sync(G.GetTheme("Baggie")) end) end
     -- Baggie's own settings may not be loaded yet at this moment: take the look again a moment later
     for _, delay in ipairs({ 1, 3 }) do C_Timer.After(delay, function() if B.SyncGreedUI then B.SyncGreedUI() end end) end

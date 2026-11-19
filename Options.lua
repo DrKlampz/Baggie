@@ -68,30 +68,10 @@ local SECTIONS = {
         { key = "gap", kind = "slider", label = "Space between slots", min = 0, max = 16, step = 1 },
         { key = "padding", kind = "slider", label = "Window padding", min = 4, max = 30, step = 1 },
     } },
-    { id = "colors", title = "Colors", scope = "all", rows = {
-        { key = "preset", kind = "cycle", label = "Theme", values = PRESET_ORDER, preset = true },
-        { key = "bgColor", kind = "color", label = "Window background" },
-        { key = "edgeColor", kind = "color", label = "Border and title text" },
-        { key = "titleColor", kind = "color", label = "Title bar" },
+    { id = "look", title = "Window look", scope = "all", rows = {
+        { kind = "button", label = "Open the look window: colors, backgrounds, borders, buttons and text (the same as your other add-ons)",
+          onClick = function() if B.WinLook then B.WinLook.Open() end end },
         { key = "slotColor", kind = "color", label = "Slot background" },
-    } },
-    { id = "bg", title = "Background and opacity", scope = "all", rows = {
-        { key = "bgColor", kind = "color", label = "Background color (a solid fill, or the tint of a texture)" },
-        { key = "bgStyle", kind = "cycle", label = "Background", values = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient", "custom" }, names = BGNAMES },
-        { key = "bgCustom", kind = "text", label = "Custom texture: a file path or a SharedMedia background name",
-          hint = "for example  Interface\\AddOns\\SomeAddon\\texture" },
-        { key = "bgNoTint", kind = "check", label = "Show textures in their own colors (no tint)" },
-        { key = "alpha", kind = "slider", label = "Window opacity", min = 0, max = 1, step = 0.02, fmt = "%.2f" },
-        { key = "edgeAlpha", kind = "slider", label = "Border opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
-        { key = "titleAlpha", kind = "slider", label = "Title bar opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
-    } },
-    { id = "frame", title = "Border and title", scope = "all", rows = {
-        { key = "edgeStyle", kind = "cycle", label = "Window border", values = { "line", "tooltip", "none" },
-          names = { line = "Thin line", tooltip = "Tooltip style", none = "None" } },
-        { key = "edgeSize", kind = "slider", label = "Line border thickness", min = 1, max = 6, step = 1 },
-        { key = "showTitleBar", kind = "check", label = "Show the title bar" },
-        { key = "titleSize", kind = "slider", label = "Title size", min = 10, max = 22, step = 1 },
-        { key = "titleFont", kind = "cycle", label = "Title font", values = FONTKEYS, names = FONTNAMES },
     } },
     { id = "slots", title = "Slots and text", scope = "all", rows = {
         { key = "slotStyle", kind = "cycle", label = "Slot background style", values = { "filled", "gradient", "texture", "game", "none" },
@@ -143,12 +123,8 @@ local SECTIONS = {
         { key = "glowMinQuality", kind = "slider", label = "Quality glows start at (4 = epic)", min = 2, max = 6, step = 1 },
         { key = "glowStrength", kind = "slider", label = "Glow brightness (quest and new items)", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "glowQualityStrength", kind = "slider", label = "Item quality glow brightness", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
-        { key = "glowSize", kind = "slider", label = "Glow size (how far it reaches past the slot)", min = 1.2, max = 2.6, step = 0.05, fmt = "%.2f" },
-    } },
-    { id = "flair", title = "Flair", scope = "all", rows = {
-        { key = "flair", kind = "cycle", label = "Window trim", values = { "none", "gilded", "royal" },
-          names = { none = "None", gilded = "Gilded line and studs", royal = "Royal: double line, diamonds, title rule" } },
         { key = "pulse", kind = "check", label = "Pulse the item glows" },
+        { key = "glowSize", kind = "slider", label = "Glow size (how far it reaches past the slot)", min = 1.2, max = 2.6, step = 0.05, fmt = "%.2f" },
     } },
     { id = "footer", title = "Bottom line", scope = "all", rows = {
         { key = "showFooter", kind = "check", label = "Show the slot counter (gold is set below)" },
@@ -172,7 +148,6 @@ local SECTIONS = {
         { key = "glowNew", kind = "check", label = "Glow new items until you point at them" },
         { key = "lockPos", kind = "check", label = "Lock window position (shows a padlock in the title bar)" },
         { key = "showMinimap", kind = "check", label = "Minimap button (right-click it for options)" },
-        { key = "shareLook", kind = "check", label = "Sync my look with my other add-ons (the newest change wins)" },
         { key = "followGreedUI", kind = "check", label = "Follow GreedUI: take its colors and look whenever its theme changes (only when GreedUI is installed)" },
         { key = "showReagent", kind = "check", label = "Show reagent bag (if this game has one)" },
         { key = "keyring", kind = "check", label = "Show keyring (if this character has one)" },
@@ -524,11 +499,17 @@ local function MakeRow(parent, tab, row)
         btn:SetScript("OnClick", function()
             set(not get())
             if row.key == "followGreedUI" and get() and B.SyncGreedUI then B.SyncGreedUI(true) end
-            if row.key == "shareLook" and get() and B.ShareLookOn then B.ShareLookOn() end
         end)
         btn:SetScript("OnEnter", function() box:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 1) end)
         btn:SetScript("OnLeave", function() box:SetBackdropBorderColor(LINE[1], LINE[2], LINE[3], 1) end)
         w.refresh = function() tick:SetShown(get() and true or false) end
+
+    elseif row.kind == "button" then
+        c:SetHeight(44)
+        local b = FlatButton(c, row.label, BW - 24, 36, function() if row.onClick then row.onClick() end end)
+        b.text:SetWidth(BW - 44)
+        b:SetPoint("LEFT", c, "LEFT", 12, 0)
+        w.refresh = function() end
 
     elseif row.kind == "slider" then
         c:SetHeight(40)

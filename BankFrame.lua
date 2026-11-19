@@ -378,6 +378,7 @@ BankRefresh = function() return B.Scoped("bank", BankRefreshRaw) end
 local function BankCreate()
     if bw then return end
     bw = MakeWindow("BaggieBankFrame", "bankPoint")
+    if B.WinLook then B.WinLook.Attach("bank", bw) end
     Place(bw, "bankPoint", 40)
     bw:SetScript("OnShow", function() BankRefresh() end)
     bw:SetScript("OnHide", function()
@@ -814,6 +815,7 @@ GuildRefresh = function() return B.Scoped("guild", GuildRefreshRaw) end
 local function GuildCreate()
     if gw then return end
     gw = MakeWindow("BaggieGuildBankFrame", "guildPoint")
+    if B.WinLook then B.WinLook.Attach("guild", gw) end
     Place(gw, "guildPoint", 40)
     gw:SetScript("OnShow", function() GuildRefresh() end)
     gw:SetScript("OnHide", function()
@@ -1102,4 +1104,5 @@ function BU.ApplyLook()
     B.styleVer = (B.styleVer or 0) + 1
     if bw then pcall(B.Scoped, "bank", F.StyleFrame, bw, "Bank") pcall(BankRefresh) end
     if gw then pcall(B.Scoped, "guild", F.StyleFrame, gw, "Guild Bank") pcall(GuildRefresh) end
+    if B.WinLook then B.WinLook.Apply() end
 end

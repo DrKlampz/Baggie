@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Baggie now uses the same Look window as your other add-ons for its inventory, bank and guild bank windows: all the colors, backgrounds, textures, border styles and finishes, depth, buttons, fonts and text outline. Your old Baggie colors and borders carry over. Open it from Options > Window look.
 - Look sync: the first time your add-ons meet, they now all take on the same look right away (Baggie's, if it is installed) instead of waiting for you to change something. Baggie no longer shares its title bar color, which means something different there.
 
 ## v0.6.10
