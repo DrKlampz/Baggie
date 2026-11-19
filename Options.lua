@@ -164,6 +164,7 @@ local SECTIONS = {
         { key = "sellButton", kind = "check", label = "Sell junk button at vendors" },
         { key = "debugBank", kind = "check", label = "Print bank diagnostics to chat (for troubleshooting)" },
         { key = "autoSell", kind = "check", label = "Sell grey items automatically at vendors" },
+        { key = "makeRoom", kind = "check", label = "Bags full: destroy the cheapest grey item to make room (grey only, never white or better)" },
     } },
 }
 O.SECTIONS = SECTIONS

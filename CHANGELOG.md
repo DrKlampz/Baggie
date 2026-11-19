@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- New option (off by default): when your bags are full, Baggie destroys the cheapest grey item to open a slot. It only ever touches grey items, never quest items or anything white or better, and does nothing in combat, at a vendor, bank, mailbox or auction house, or if you have no grey items.
 - Removed the add-on-to-add-on theming hooks and cross-add-on names from the window look code; the shared look sync between your add-ons works the same.
 - Escape now always closes the inventory window, whichever way it was opened, instead of opening the game menu.
 - The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.

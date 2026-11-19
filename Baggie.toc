@@ -16,6 +16,7 @@ Roster.lua
 Layout.lua
 Frame.lua
 Toss.lua
+MakeRoom.lua
 Glow.lua
 Minimap.lua
 Options.lua
