@@ -1,6 +1,6 @@
 local ADDON, B = ...
 -- Share the look with David's other add-ons (the newest change wins). Uses the same hub as their Look files: _G.GreedLookShare.
-local KEYS = { "bgColor", "edgeColor", "titleColor", "alpha", "edgeAlpha", "bgStyle", "bgCustom", "bgNoTint", "edgeStyle", "edgeSize" }
+local KEYS = { "bgColor", "edgeColor", "alpha", "edgeAlpha", "bgStyle", "bgCustom", "bgNoTint", "edgeStyle", "edgeSize" }
 local Hub = _G.GreedLookShare
 if not Hub then Hub = { m = {} } _G.GreedLookShare = Hub end
 local sharing = false
@@ -99,11 +99,37 @@ Hub.m.Baggie = {
     stamp = function() return B.db and B.db.shareStamp or 0 end,
     snap = Snap,
     take = Take,
+    seed = function(stamp)
+        if not B.db then return end
+        B.db.shareSig = Sig(Snap())
+        B.db.shareStamp = stamp
+    end,
 }
+-- the very first time (nobody has shared yet): one add-on's look becomes the starting point for all of them
+local function Elect()
+    if Hub.elected then return end
+    Hub.elected = true
+    local names = {}
+    for name, m in pairs(Hub.m) do
+        if m.on() then
+            if m.stamp() > 0 then return end
+            names[#names + 1] = name
+        end
+    end
+    if #names < 2 then return end
+    table.sort(names)
+    local lead = (Hub.m.Baggie and Hub.m.Baggie.on() and "Baggie") or names[1]
+    local stamp = time()
+    local m = Hub.m[lead]
+    local snap = m.snap()
+    if not snap then return end
+    m.seed(stamp)
+    Push(snap, stamp)
+end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
     if B.Frame and B.Frame.ApplyLook then hooksecurefunc(B.Frame, "ApplyLook", function() B.ShareCheck() end) end
-    C_Timer.After(1.5, function() if On() then Pull() end end)
+    C_Timer.After(1.5, function() if On() then pcall(Elect) Pull() end end)
 end)
