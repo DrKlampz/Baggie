@@ -373,6 +373,7 @@ local function UpdateButton(btn, text)
         btn.baggieIcon:Hide()
     end
     pcall(B.PaintUnusable, btn, tex and link or nil)
+    if _G.Outfitter_BagArrow and not btn.isBank then pcall(_G.Outfitter_BagArrow, btn, btn.bag, btn.slot) end     -- bag arrow, when an add-on that draws one is installed
     local n = tonumber(count) or 0
     btn.baggieCount:SetText((tex and n > 1) and tostring(n) or "")
     QuietTemplate(btn)

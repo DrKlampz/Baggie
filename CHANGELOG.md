@@ -1,7 +1,7 @@
 # Changelog
 
 ## v0.8.0
-- Works completely on its own: it no longer looks for any other add-on.
+- Works completely on its own. If another add-on that draws upgrade arrows on bag items is installed, Baggie shows them; if not, nothing changes and nothing errors.
 - Full bags while looting: Baggie now destroys your cheapest grey items to make room, as many as the loot needs, and keeps doing it on every full-bag loot attempt until no grey item is left. Then it puts a trash can on the cheapest white item as a hint (it never destroys white items for you). Both are on by default and each has its own checkbox in Options > Vendors and mail, so you can turn them off.
 - Removed the add-on-to-add-on theming hooks and cross-add-on names from the window look code; the shared look sync between your add-ons works the same.
 - Escape now always closes the inventory window, whichever way it was opened, instead of opening the game menu.
