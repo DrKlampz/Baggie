@@ -1,7 +1,7 @@
 -- Baggie: make room when the bags are full.
 -- On by default, and each part can be turned off in Options > Vendors and mail.
 --  * makeRoom: when you try to loot and every general bag slot is taken, Baggie destroys the cheapest grey
---    (junk) items to open room for the loot, one per full-bag loot attempt, until no grey item is left.
+--    (junk) items to open room for the loot, as many as the loot needs, on every full-bag loot attempt, until no grey item is left.
 --    Only grey items are ever destroyed: never white or better, never quest items, nothing at a vendor, bank,
 --    mailbox, auction house or trade window, and nothing while you hold something on the cursor.
 --  * makeRoomMark: with the bags full and no grey item left, the cheapest white (common) item gets a trash can
