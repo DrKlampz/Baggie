@@ -1,6 +1,7 @@
 # Changelog
 
 ## v0.8.0
+- New optional artwork in the window look: seven textured backgrounds (wood planks, aged paper, arcane starfield, runed slate, riveted iron, damask tapestry, dragon scales), five carved corner pieces (filigree, vines, runes, iron plates, arcane sigil), four crests for the top edge (winged, jeweled, scrollwork, crown), and eight ready-made art themes (Arcane library, Dwarven forge, Elven glade, Old tome, Runestone, Royal court, Dragonscale, Oak lodge). Pick them in the window options (Colors > Theme, Background, Border > Corner artwork and Crest). Everything is off until you choose it and syncs between your add-ons like the rest of the look.
 - Works completely on its own. If another add-on that draws upgrade arrows on bag items is installed, Baggie shows them; if not, nothing changes and nothing errors.
 - Full bags while looting: Baggie now destroys your cheapest grey items to make room, as many as the loot needs, and keeps doing it on every full-bag loot attempt until no grey item is left. Then it puts a trash can on the cheapest white item as a hint (it never destroys white items for you). Both are on by default and each has its own checkbox in Options > Vendors and mail, so you can turn them off.
 - Removed the add-on-to-add-on theming hooks and cross-add-on names from the window look code; the shared look sync between your add-ons works the same.
