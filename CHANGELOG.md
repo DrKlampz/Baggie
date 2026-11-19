@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.10
 - Your custom look is now shared with your other add-ons: change colors, background, border or opacity in one and the rest follow (the newest change wins). It is on by default; untick "Sync my look with my other add-ons" in the options to turn it off.
 
 ## v0.6.9
