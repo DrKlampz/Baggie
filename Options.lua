@@ -148,7 +148,6 @@ local SECTIONS = {
         { key = "glowNew", kind = "check", label = "Glow new items until you point at them" },
         { key = "lockPos", kind = "check", label = "Lock window position (shows a padlock in the title bar)" },
         { key = "showMinimap", kind = "check", label = "Minimap button (right-click it for options)" },
-        { key = "followGreedUI", kind = "check", label = "Follow GreedUI: take its colors and look whenever its theme changes (only when GreedUI is installed)" },
         { key = "showReagent", kind = "check", label = "Show reagent bag (if this game has one)" },
         { key = "keyring", kind = "check", label = "Show keyring (if this character has one)" },
         { key = "sectionLabels", kind = "check", label = "Label and separate those extra sections" },
@@ -498,7 +497,6 @@ local function MakeRow(parent, tab, row)
         btn:SetAllPoints(c)
         btn:SetScript("OnClick", function()
             set(not get())
-            if row.key == "followGreedUI" and get() and B.SyncGreedUI then B.SyncGreedUI(true) end
         end)
         btn:SetScript("OnEnter", function() box:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 1) end)
         btn:SetScript("OnLeave", function() box:SetBackdropBorderColor(LINE[1], LINE[2], LINE[3], 1) end)

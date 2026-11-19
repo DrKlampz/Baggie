@@ -1,12 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Removed the add-on-to-add-on theming hooks and cross-add-on names from the window look code; the shared look sync between your add-ons works the same.
 - Escape now always closes the inventory window, whichever way it was opened, instead of opening the game menu.
 - The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.
 
 ## v0.7.0
 - Baggie now uses the same Look window as your other add-ons for its inventory, bank and guild bank windows: all the colors, backgrounds, textures, border styles and finishes, depth, buttons, fonts and text outline. Your old Baggie colors and borders carry over. Open it from Options > Window look.
-- Look sync: the first time your add-ons meet, they now all take on the same look right away (Baggie's, if it is installed) instead of waiting for you to change something. Baggie no longer shares its title bar color, which means something different there.
+- Look sync: the first time your add-ons meet, they now all take on the same look right away instead of waiting for you to change something.
 
 ## v0.6.10
 - Your custom look is now shared with your other add-ons: change colors, background, border or opacity in one and the rest follow (the newest change wins). It is on by default; untick "Sync my look with my other add-ons" in the options to turn it off.
@@ -29,7 +30,7 @@
 
 ## v0.6.4
 - Money display rebuilt: Coin icons now show real gold, silver and copper pictures (before they looked the same as the colored letters). New: plain white letters, gold and silver only, short numbers (12.3k), options to hide silver or copper, and a thousands separator.
-- Fonts: the font pack now ships inside Baggie (over 100 fonts) for the title, counts and bottom line, and Baggie follows GreedUI's font.
+- Fonts: the font pack now ships inside Baggie (over 100 fonts) for the title, counts and bottom line.
 - Colors: the slot options only show what applies to the chosen slot style (flat color, gradient or tile), the textured tiles show their texture instead of a flat grey, and your own color changes are no longer overwritten at every login by GreedUI. GreedUI's look is applied when its theme changes.
 - Bank: the game blocks add-ons from buying a bank tab, so Buy tab now opens the game's own bank window for the purchase and hides it again afterwards.
 
