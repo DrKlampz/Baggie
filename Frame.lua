@@ -1405,7 +1405,7 @@ local function Create()
     win.money = Label(win.footerLayer, 11, 1, 0.85, 0.4)
     win.money:SetPoint("BOTTOMRIGHT", -PAD, 10)
 
-    win:SetScript("OnShow", function() F.Refresh() end)
+    win:SetScript("OnShow", function() if not softClosed then SpecialFrame(true) end F.Refresh() end)
     win:SetScript("OnHide", function()
         editMode, pick = false, nil
         F.UpdateOverlays()

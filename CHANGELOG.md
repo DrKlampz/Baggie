@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Escape now always closes the inventory window, whichever way it was opened, instead of opening the game menu.
 - The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.
 
 ## v0.7.0
