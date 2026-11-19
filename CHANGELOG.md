@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Your custom look is now shared with your other add-ons: change colors, background, border or opacity in one and the rest follow (the newest change wins). It is on by default; untick "Sync my look with my other add-ons" in the options to turn it off.
+
 ## v0.6.9
 - Fix: the bag window and the bag keys now work in combat. The bag slots are secure buttons, which makes the window protected, so the game refused to show or hide it in a fight. The window now stays on standby (shown, invisible, mouse off) and only fades in or out in combat, and the bag keys click a button of Baggie's own instead of running the game's bag functions. Slots opened for the first time in combat can be seen but not clicked until combat ends. To go back to the old behaviour: /run BaggieDB.combatSafe=false then /reload.
 - The minimap button's Alt-click now opens the options (it no longer destroys marked quest items).

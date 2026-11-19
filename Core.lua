@@ -17,6 +17,7 @@ B.DEFAULTS = {
     iconInset = 2,          -- space between a slot's edge and its icon
     preset = "gold",
     followGreedUI = true,
+    shareLook = true,
     bgColor = { 0.05, 0.05, 0.07 },
     edgeColor = { 0.88, 0.69, 0.29 },
     titleColor = { 0.13, 0.11, 0.07 },

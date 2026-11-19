@@ -21,3 +21,4 @@ Minimap.lua
 Options.lua
 BankFrame.lua
 GreedSync.lua
+ShareLook.lua
