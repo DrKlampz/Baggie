@@ -106,7 +106,8 @@ B.DEFAULTS = {
     autoOpen = true,     -- open at vendor / mailbox / auction house / bank
     sellButton = true,   -- "Sell junk" button while a vendor is open
     autoSell = false,    -- sell grey items automatically on vendor open
-    makeRoom = false,    -- when the bags are full, destroy the cheapest grey item to open a slot
+    makeRoom = true,     -- trying to loot with full bags: destroy the cheapest grey items to open room
+    makeRoomMark = true, -- bags full and no grey left: show a trash can on the cheapest white item
     sharedPins = false,  -- one set of saved spots for all characters
 }
 

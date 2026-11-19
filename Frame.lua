@@ -373,7 +373,6 @@ local function UpdateButton(btn, text)
         btn.baggieIcon:Hide()
     end
     pcall(B.PaintUnusable, btn, tex and link or nil)
-    if _G.Outfitter_BagArrow and not btn.isBank then pcall(_G.Outfitter_BagArrow, btn, btn.bag, btn.slot) end     -- Outfitter: green arrow on the best upgrades
     local n = tonumber(count) or 0
     btn.baggieCount:SetText((tex and n > 1) and tostring(n) or "")
     QuietTemplate(btn)
@@ -413,6 +412,26 @@ local function UpdateButton(btn, text)
             tm:Show()
         elseif btn.tossMark then
             btn.tossMark:Hide()
+        end
+    end
+
+    -- bags full and no junk left: a trash can on the cheapest white item (a suggestion, never destroyed for you)
+    do
+        local t = not btn.isBank and tex and B.MakeRoom and B.MakeRoom.MarkTarget and B.MakeRoom.MarkTarget()
+        if t and t.bag == btn.bag and t.slot == btn.slot then
+            local tc = btn.trashCan
+            if not tc then
+                tc = btn:CreateTexture(nil, "OVERLAY", nil, 6)
+                tc:SetTexture("Interface\\AddOns\\Baggie\\Media\\Trash")
+                tc:SetPoint("CENTER", btn, "CENTER", 0, 0)
+                btn.trashCan = tc
+            end
+            local w = (btn:GetWidth() or 36) * 0.6
+            tc:SetSize(w, w)
+            tc:SetAlpha(0.9)
+            tc:Show()
+        elseif btn.trashCan then
+            btn.trashCan:Hide()
         end
     end
 

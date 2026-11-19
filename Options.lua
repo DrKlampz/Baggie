@@ -164,7 +164,8 @@ local SECTIONS = {
         { key = "sellButton", kind = "check", label = "Sell junk button at vendors" },
         { key = "debugBank", kind = "check", label = "Print bank diagnostics to chat (for troubleshooting)" },
         { key = "autoSell", kind = "check", label = "Sell grey items automatically at vendors" },
-        { key = "makeRoom", kind = "check", label = "Bags full: destroy the cheapest grey item to make room (grey only, never white or better)" },
+        { key = "makeRoom", kind = "check", label = "Full bags while looting: destroy the cheapest grey items to make room (grey only, never white or better)" },
+        { key = "makeRoomMark", kind = "check", label = "Full bags and no grey left: put a trash can on the cheapest white item (only a hint, never destroyed for you)" },
     } },
 }
 O.SECTIONS = SECTIONS
