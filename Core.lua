@@ -788,6 +788,30 @@ end
 ----------------------------------------------------------------------
 -- Saved spots (per character)
 ----------------------------------------------------------------------
+local function RealmFallback(db, name)
+    local r = GetRealmName and GetRealmName()
+    if type(r) ~= "string" or r == "" then r = GetNormalizedRealmName and GetNormalizedRealmName() end
+    if type(r) == "string" and r ~= "" then
+        if type(db) == "table" then db.lastRealm = r end
+        return r
+    end
+    if type(db) == "table" then
+        if type(db.lastRealm) == "string" and db.lastRealm ~= "" then return db.lastRealm end
+        local pre = (name or "?") .. "-"
+        for _, t in pairs(db) do
+            if type(t) == "table" then
+                for k in pairs(t) do
+                    if type(k) == "string" and #k > #pre and k:sub(1, #pre) == pre then
+                        local s = k:sub(#pre + 1)
+                        db.lastRealm = s
+                        return s
+                    end
+                end
+            end
+        end
+    end
+    return ""
+end
 function B.CharKey()
     -- two-part names ("Dr Flamel") come back from UnitName as first name + last name in the realm slot
     local name = "?"
@@ -800,7 +824,7 @@ function B.CharKey()
             if second ~= r1 and second ~= r2 then name = first .. " " .. second end
         end
     end
-    local realm = _G.GetRealmName and _G.GetRealmName() or "?"
+    local realm = RealmFallback(_G.BaggieDB, name)
     return name .. "-" .. realm
 end
 
