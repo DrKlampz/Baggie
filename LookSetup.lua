@@ -3,6 +3,7 @@ local ADDON, B = ...
 B.WinLook.Setup({
     title = "Baggie",
     slash = "baggielook",
+    dock = { name = "Options", frame = function() local f = _G.BaggieOptions if f and f:IsShown() then return f end end, show = function(from) if B.Options and B.Options.ShowAt then B.Options.ShowAt(from) end end },
     media = "Interface\\AddOns\\Baggie\\Media\\",
     db = function() return B.db end,
     windows = {

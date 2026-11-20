@@ -70,7 +70,7 @@ local SECTIONS = {
     } },
     { id = "look", title = "Window look", scope = "all", rows = {
         { kind = "button", label = "Open the look window: colors, backgrounds, borders, buttons and text (the same as your other add-ons)",
-          onClick = function() if B.WinLook then B.WinLook.Open() end end },
+          onClick = function() if B.WinLook then B.WinLook.OpenAt(_G.BaggieOptions) end end },
         { key = "slotColor", kind = "color", label = "Slot background" },
     } },
     { id = "slots", title = "Slots and text", scope = "all", rows = {
@@ -826,6 +826,7 @@ local function Build()
     local x = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     x:SetPoint("TOPRIGHT", 2, 2)
     table.insert(_G.UISpecialFrames, "BaggieOptions")
+    if B.WinLook and B.WinLook.AddDockTabs then B.WinLook.AddDockTabs(win, "opts") end
 
     -- sync switch
     local sync = Box(win, 16, 16)
@@ -910,10 +911,26 @@ local function Build()
     win:Hide()
 end
 
+-- shown in place of the look window (they are docked as two tabs of one window)
+function O.ShowAt(from)
+    if not B.db then return end
+    if not win then Build() end
+    if from and from.GetLeft and from:GetLeft() then
+        win:ClearAllPoints()
+        win:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", from:GetLeft(), from:GetTop())
+        from:Hide()
+    end
+    win:Show()
+    win.SyncDraw()
+    ShowTab(curTab)
+end
+
 function O.Toggle(tab)
     if not B.db then return end
     if not win then Build() end
     if win:IsShown() and not tab then win:Hide() return end
+    local lk = _G.BaggieLookOptions
+    if lk and lk:IsShown() and not win:IsShown() then O.ShowAt(lk) if tab then ShowTab(tab) end return end
     win:Show()
     win.SyncDraw()
     ShowTab(tab or curTab)
