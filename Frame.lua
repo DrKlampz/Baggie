@@ -1281,6 +1281,7 @@ local function Create()
 
     local close = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 1)
+    win.closeBtn = close
     close:SetScript("OnClick", function() F.Close() end)
 
     win.search = CreateFrame("EditBox", "BaggieSearch", win, "InputBoxTemplate")

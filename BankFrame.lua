@@ -64,6 +64,7 @@ local function MakeWindow(name, key)
     w.title:SetPoint("TOPLEFT", 12, -7)
     local close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 1)
+    w.closeBtn = close
     w.search = CreateFrame("EditBox", name .. "Search", w, "InputBoxTemplate")
     w.search:SetSize(120, 18)
     w.search:SetPoint("TOPRIGHT", -34, -33)

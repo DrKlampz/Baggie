@@ -7,9 +7,9 @@ B.WinLook.Setup({
     media = "Interface\\AddOns\\Baggie\\Media\\",
     db = function() return B.db end,
     windows = {
-        { id = "bags", name = "Inventory", global = "BaggieFrame", strip = "backdrop", noScale = true, noAlpha = true, defaultOn = true, hide = { "bar" }, title = function(f) return f.title end },
-        { id = "bank", name = "Bank", global = "BaggieBankFrame", strip = "backdrop", noScale = true, noAlpha = true, defaultOn = true, hide = { "bar" }, title = function(f) return f.title end },
-        { id = "guild", name = "Guild Bank", global = "BaggieGuildBankFrame", strip = "backdrop", noScale = true, noAlpha = true, defaultOn = true, hide = { "bar" }, title = function(f) return f.title end },
+        { id = "bags", name = "Inventory", global = "BaggieFrame", strip = "backdrop", noScale = true, noAlpha = true, defaultOn = true, dividerY = -55, hide = { "bar" }, title = function(f) return f.title end, close = function(f) return f.closeBtn end },
+        { id = "bank", name = "Bank", global = "BaggieBankFrame", strip = "backdrop", noScale = true, noAlpha = true, defaultOn = true, dividerY = -55, hide = { "bar" }, title = function(f) return f.title end, close = function(f) return f.closeBtn end },
+        { id = "guild", name = "Guild Bank", global = "BaggieGuildBankFrame", strip = "backdrop", noScale = true, noAlpha = true, defaultOn = true, dividerY = -55, hide = { "bar" }, title = function(f) return f.title end, close = function(f) return f.closeBtn end },
     },
 })
 
