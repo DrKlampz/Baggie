@@ -1431,19 +1431,43 @@ local function Create()
     win:Hide()
 end
 
-function F.SellJunk()
+-- what one item of this kind sells for at a vendor (0 when it cannot be sold)
+local function VendorPrice(link)
+    local fn = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
+    if not fn then return nil end
+    local ok, _, _, _, _, _, _, _, _, _, _, price = pcall(fn, link)
+    if ok then return tonumber(price) end
+    return nil
+end
+
+local function Coins(copper)
+    if _G.GetCoinTextureString then return _G.GetCoinTextureString(copper) end
+    return string.format("%dg %ds %dc", math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
+end
+
+-- Sell every grey item the vendor will buy. Grey items with no vendor price are left alone (they cannot be sold),
+-- and nothing of any other quality is ever touched. quiet: say nothing when there was nothing to sell.
+function F.SellJunk(quiet)
     if not merchantOpen then return end
     local c = _G.C_Container
-    local n = 0
+    local n, total = 0, 0
     for _, s in ipairs(B.ScanSlots()) do
-        local _, _, locked, quality, link = B.SlotInfo(s.bag, s.slot)
+        local _, count, locked, quality, link = B.SlotInfo(s.bag, s.slot)
         if link and quality == 0 and not locked then
-            if c and c.UseContainerItem then c.UseContainerItem(s.bag, s.slot)
-            elseif _G.UseContainerItem then _G.UseContainerItem(s.bag, s.slot) end
-            n = n + 1
+            local price = VendorPrice(link)
+            if price == nil or price > 0 then
+                if c and c.UseContainerItem then c.UseContainerItem(s.bag, s.slot)
+                elseif _G.UseContainerItem then _G.UseContainerItem(s.bag, s.slot) end
+                n = n + 1
+                total = total + (price or 0) * (tonumber(count) or 1)
+            end
         end
     end
-    B.Print(n > 0 and ("sold " .. n .. " grey item stack(s)") or "no grey items to sell")
+    if n > 0 then
+        B.Print("sold " .. n .. " grey item" .. (n == 1 and "" or "s") .. (total > 0 and (" for " .. Coins(total)) or ""))
+    elseif not quiet then
+        B.Print("no grey items to sell")
+    end
 end
 
 function F.Debug()
@@ -1699,7 +1723,6 @@ local function Arrive(isMerchant)
         win.sellBtn:SetShown(B.db.sellButton)
     end
     if B.db.autoOpen and not F.IsOpen() then openedByUs = true F.SetOpen(true) end
-    if isMerchant and B.db.autoSell then F.SellJunk() end
 end
 local function Leave(isMerchant)
     if not win then return end
@@ -1709,6 +1732,15 @@ local function Leave(isMerchant)
 end
 B.On("MERCHANT_SHOW", B.Safe("merchant", function() Arrive(true) end))
 B.On("MERCHANT_CLOSED", B.Safe("merchantx", function() Leave(true) end))
+-- automatic selling does not depend on the bag window being built or open; it waits a moment so the vendor is ready
+B.On("MERCHANT_SHOW", B.Safe("autosell", function()
+    if not (B.db and B.db.autoSell) then return end
+    if _G.C_Timer and _G.C_Timer.After then
+        _G.C_Timer.After(0.3, B.Safe("autosell2", function() merchantOpen = true F.SellJunk(true) end))
+    else
+        merchantOpen = true F.SellJunk(true)
+    end
+end))
 B.On("MAIL_SHOW", B.Safe("mail", function() Arrive(false) end))
 B.On("MAIL_CLOSED", B.Safe("mailx", function() Leave(false) end))
 B.On("BANKFRAME_OPENED", B.Safe("bank", function() Arrive(false) end))

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.7
+
+- Grey items are now sold automatically when you open a vendor (turn it off under Vendors and mail). It says how many were sold and for how much, skips grey items a vendor will not buy, and never touches white or better items
+- The Sell junk button does the same and reports the gold
+
 ## v0.8.6
 
 - Redrawn anarchy symbol with a hand-brushed, worn look

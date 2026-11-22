@@ -105,7 +105,7 @@ B.DEFAULTS = {
     lockPos = false,
     autoOpen = true,     -- open at vendor / mailbox / auction house / bank
     sellButton = true,   -- "Sell junk" button while a vendor is open
-    autoSell = false,    -- sell grey items automatically on vendor open
+    autoSell = true,     -- sell grey items automatically on vendor open
     makeRoom = true,     -- trying to loot with full bags: destroy the cheapest grey items to open room
     makeRoomMark = true, -- bags full and no grey left: show a trash can on the cheapest white item
     sharedPins = false,  -- one set of saved spots for all characters
@@ -880,6 +880,8 @@ B.On("ADDON_LOADED", B.Safe("load", function(name)
     if name ~= ADDON_NAME then return end
     BaggieDB = BaggieDB or {}
     B.db = Merge(BaggieDB, B.DEFAULTS)
+    -- automatic selling of grey items became the default; switch it on once for everyone (they can turn it off again)
+    if not B.db.autoSellDefaulted then B.db.autoSell = true B.db.autoSellDefaulted = true end
     if B.db.borders == false then B.db.borderMode = "none" end   -- older versions
     B.db.borders = nil
     B.EnsureScope("bank") B.EnsureScope("guild")
