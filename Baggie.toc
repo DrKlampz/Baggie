@@ -22,5 +22,6 @@ Glow.lua
 Minimap.lua
 Options.lua
 BankFrame.lua
+BankGossip.lua
 Look.lua
 LookSetup.lua

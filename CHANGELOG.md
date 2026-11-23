@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.9
+
+- Bankers that ask "Would you rather trust your goods with a goblin?" now open the bank straight away: Baggie picks "I would like to check my deposit box" for you. Hold Shift to see the choices, or turn it off under Vendors and mail
+
+- Fixed make-room never destroying anything: the game blocks add-ons from destroying items from the loot event (it was logged as blocked) while Baggie wrongly said it had. Baggie now asks with a Destroy button, and a click goes through
+- Full bags and the loot has a quest item: if no grey item is left, Baggie now destroys the cheapest white or green item to make room (one per quest item). It never destroys rare or better, quest items, bags, saved-spot items or the hearthstone. Turn it off under Vendors and mail
+
 ## v0.8.8
 
 - Internal update to the shared window look code. Nothing you will notice changed
