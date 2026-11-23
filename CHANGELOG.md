@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.8
+
+- Windows share the same look code as the rest of the add-ons, and can be closed in combat. Nothing else changed
+
+
 ## v0.8.7
 
 - Fixed right-clicking items such as copper bars with the bank open not going into the bank: the special-bag step could pick your own carried Reagent Bag or a bank tab you have not bought as its target. It now only looks at real bank bags and bought tabs, and if a move does not go through it hands the click back to the game
