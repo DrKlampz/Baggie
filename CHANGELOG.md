@@ -2,6 +2,7 @@
 
 ## v0.8.7
 
+- Fixed right-clicking items such as copper bars with the bank open not going into the bank: the special-bag step could pick your own carried Reagent Bag or a bank tab you have not bought as its target. It now only looks at real bank bags and bought tabs, and if a move does not go through it hands the click back to the game
 - Grey items are now sold automatically when you open a vendor (turn it off under Vendors and mail). It says how many were sold and for how much, skips grey items a vendor will not buy, and never touches white or better items
 - The Sell junk button does the same and reports the gold
 

@@ -473,16 +473,22 @@ function B.SmartBankStore(bag, slot)
     if not link or locked then return false end
     local fam = B.ItemFamily(link)
     if fam == 0 or not _G.bit then return false end
-    local first = (tonumber(_G.NUM_BAG_SLOTS) or 4) + 1
-    local last = (tonumber(_G.NUM_BAG_SLOTS) or 4) + (tonumber(_G.NUM_BANKBAGSLOTS) or 7)
     local maxStack = 1
     local gi = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
     if gi then
         local _, _, _, _, _, _, _, ms = gi(link)
         maxStack = tonumber(ms) or 1
     end
-    for b = first, last do
-        local bf = B.BagFamily(b)
+    -- only real bank bags and bought bank tabs: not your own carried Reagent Bag (it sits at the id where the bank
+    -- range starts) and not tabs you have not bought yet, which would swallow the item
+    local ids = ui.BagIDs and ui.BagIDs() or {}
+    local function Move(b, sl)
+        B.Pickup(bag, slot) B.Pickup(b, sl)
+        if _G.CursorHasItem and _G.CursorHasItem() then _G.ClearCursor() return false end   -- it did not go: leave it to the normal right-click
+        return true
+    end
+    for _, b in ipairs(ids) do
+        local bf = (b > 0) and B.BagFamily(b) or 0
         if bf ~= 0 and _G.bit.band(fam, bf) ~= 0 then
             local num = B.NumSlots(b)
             local freeSlot
@@ -491,14 +497,10 @@ function B.SmartBankStore(bag, slot)
                 if not l2 then
                     freeSlot = freeSlot or sl
                 elseif id2 == id and (tonumber(c2) or 1) + (tonumber(count) or 1) <= maxStack then
-                    B.Pickup(bag, slot) B.Pickup(b, sl)
-                    return true
+                    return Move(b, sl)
                 end
             end
-            if freeSlot then
-                B.Pickup(bag, slot) B.Pickup(b, freeSlot)
-                return true
-            end
+            if freeSlot then return Move(b, freeSlot) end
         end
     end
     return false
