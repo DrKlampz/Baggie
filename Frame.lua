@@ -21,7 +21,11 @@ local function InCombat() return _G.InCombatLockdown and _G.InCombatLockdown() e
 -- "closed" means invisible with the mouse off; opening and closing in combat only changes its alpha.
 local softClosed = false
 local pendingOpen = false
-local function CombatSafe() return not B.db or B.db.combatSafe ~= false end
+local pendingClose = false
+-- Standby mode (window always shown, invisible, mouse off) is off by default: in combat the game will not let an add-on turn
+-- the mouse back on for the slots, so an opened window could be seen but not clicked. The bag keys now open and close the
+-- window through a secure button instead, which the game allows in combat. /run BaggieDB.combatSafe=true brings standby back.
+local function CombatSafe() return B.db and B.db.combatSafe == true or false end
 function F.IsOpen()
     local w = B.window
     if not (w and w:IsShown()) then return false end
@@ -1559,6 +1563,12 @@ function F.SetOpen(want)
         return
     end
     if not CombatSafe() then
+        if InCombat() then
+            -- the game will not show or hide this window from an add-on in combat; the bag keys can (see BindKeys)
+            if want then pendingOpen = true B.Print("can't open from here in combat; use your bag key, or it opens when combat ends.")
+            else pendingClose = true end
+            return
+        end
         if want then win:Show() else win:Hide() end
         return
     end
@@ -1593,20 +1603,37 @@ function F.Toggle() F.SetOpen(not F.IsOpen()) end
 
 -- the bag keys click a plain button of ours instead of running the game's bag functions, which
 -- fail in combat once the game's own bag frames have been moved out of the way
-local binder, lastKey = nil, 0
+local binder = nil
 function F.BindKeys()
     if InCombat() then return end
+    if not win then return end
     if not binder then
-        binder = CreateFrame("Button", "BaggieToggleButton", UIParent)
-        binder:SetScript("OnClick", function()
-            local now = GetTime()
-            if now - lastKey < 0.15 then return end
-            lastKey = now
-            F.Toggle()
-        end)
+        -- a secure button: its snippet may show and hide the window in combat, which Lua from an add-on may not
+        local ok, b = pcall(CreateFrame, "Button", "BaggieToggleButton", UIParent, "SecureHandlerClickTemplate")
+        if ok and b then
+            binder = b
+            binder:SetFrameRef("win", win)
+            binder:SetAttribute("_onclick", [[
+                local gt = GetTime
+                if gt then
+                    local now = gt()
+                    if now - (self:GetAttribute("lastpress") or 0) < 0.15 then return end
+                    self:SetAttribute("lastpress", now)
+                end
+                local w = self:GetFrameRef("win")
+                if w:IsShown() then w:Hide() else w:Show() end
+            ]])
+            binder:HookScript("PostClick", function()
+                if win and win:IsShown() then softClosed = false F.Refresh() end
+            end)
+        else
+            binder = false
+            B.Print("could not set up the combat-safe bag key (" .. tostring(b) .. ")")
+        end
     end
+    if not binder then return end
     if _G.ClearOverrideBindings then ClearOverrideBindings(binder) end
-    if not (B.db and B.db.enabled and CombatSafe()) then return end
+    if not (B.db and B.db.enabled) then return end
     for _, cmd in ipairs({ "OPENALLBAGS", "TOGGLEBACKPACK", "TOGGLEBAG1", "TOGGLEBAG2", "TOGGLEBAG3", "TOGGLEBAG4" }) do
         local k1, k2 = GetBindingKey(cmd)
         for _, k in ipairs({ k1 or false, k2 or false }) do
@@ -1689,7 +1716,7 @@ function F.Setup()
     F.ApplyLook()
     RestorePosition()
     F.ApplyOverrides()
-    if CombatSafe() and not InCombat() then F.Arm() end
+    if CombatSafe() and not InCombat() then F.Arm() elseif not InCombat() then SetMouse(true) end
     F.BindKeys()
     if B.Minimap then B.Minimap.Create() end
 end
@@ -1699,6 +1726,12 @@ for _, e in ipairs({ "BAG_UPDATE", "BAG_UPDATE_DELAYED", "BAG_UPDATE_COOLDOWN", 
     B.On(e, B.Safe(e, function() if win and F.IsOpen() then Schedule() end end))
 end
 B.On("PLAYER_REGEN_ENABLED", B.Safe("regen", function()
+    if win and not CombatSafe() then
+        if pendingOpen then pendingOpen = false pendingClose = false F.SetOpen(true)
+        elseif pendingClose then pendingClose = false F.SetOpen(false) end
+        SetMouse(true)
+        F.BindKeys()
+    end
     if win and CombatSafe() then
         if pendingOpen then pendingOpen = false F.SetOpen(true) end
         if not win:IsShown() then F.Arm() else SetMouse(F.IsOpen()) end

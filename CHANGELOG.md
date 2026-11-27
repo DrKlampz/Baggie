@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.10
+
+- Fixed: bags could not be clicked or opened in combat (seen in dungeons). Baggie kept its window on standby with the mouse switched off, and the game does not let an add-on switch the mouse back on in combat, so the window could appear but its slots did nothing. The bag keys now open and close the window through a secure button that the game allows in combat, and the slots stay clickable. Opening the bags from the bag bar or the minimap button in combat still waits until combat ends. To get the old standby behaviour back: /run BaggieDB.combatSafe=true then /reload
+
 ## v0.8.9
 
 - Bankers that ask "Would you rather trust your goods with a goblin?" now open the bank straight away: Baggie picks "I would like to check my deposit box" for you. Hold Shift to see the choices, or turn it off under Vendors and mail
