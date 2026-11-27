@@ -1251,7 +1251,12 @@ end
 
 local function Create()
     if win then return end
-    win = CreateFrame("Frame", "BaggieFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    -- an explicitly secure frame, so the bag key's secure snippet may show and hide it in combat (the slots are secure buttons anyway)
+    do
+        local tpl = "SecureHandlerBaseTemplate" .. (BackdropTemplateMixin and ",BackdropTemplate" or "")
+        local ok, made = pcall(CreateFrame, "Frame", "BaggieFrame", UIParent, tpl)
+        win = (ok and made) or CreateFrame("Frame", "BaggieFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    end
     B.window = win
     if B.WinLook then B.WinLook.Attach("bags", win) end
     win:SetFrameStrata("HIGH")
@@ -1624,6 +1629,9 @@ function F.BindKeys()
                 if w:IsShown() then w:Hide() else w:Show() end
             ]])
             binder:HookScript("PostClick", function()
+                if B.db and B.db.keyDebug then
+                    B.Print(("bag key: combat=%s shown=%s protected=%s"):format(tostring(InCombat() and true or false), tostring(win and win:IsShown()), tostring(win and win:IsProtected())))
+                end
                 if win and win:IsShown() then softClosed = false F.Refresh() end
             end)
         else

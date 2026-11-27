@@ -2,6 +2,7 @@
 
 ## v0.8.10
 
+- The bag window is now an explicitly secure frame, so the bag key can show it in combat. For troubleshooting: /run BaggieDB.keyDebug=true makes the bag key print what it did
 - Fixed: bags could not be clicked or opened in combat (seen in dungeons). Baggie kept its window on standby with the mouse switched off, and the game does not let an add-on switch the mouse back on in combat, so the window could appear but its slots did nothing. The bag keys now open and close the window through a secure button that the game allows in combat, and the slots stay clickable. Opening the bags from the bag bar or the minimap button in combat still waits until combat ends. To get the old standby behaviour back: /run BaggieDB.combatSafe=true then /reload
 
 ## v0.8.9
