@@ -274,7 +274,7 @@ do
         if not anyOwner and not (_G.GameTooltip and GameTooltip:IsOwned(b)) then return end
         logged = logged + 1
         local st = (_G.debugstack and debugstack(3, 8, 0)) or "no stack"
-        if B.Issue then pcall(B.Issue, "warn", "tooltip hidden while hovering (" .. how .. ")", (tostring(st):gsub("\n", " | "))) end
+        if B.Issue then pcall(B.Issue, "note", "tooltip hidden while hovering (" .. how .. ")", (tostring(st):gsub("\n", " | "))) end
     end
     if _G.GameTooltip then
         pcall(hooksecurefunc, GameTooltip, "Hide", function() Trace("Hide") end)
