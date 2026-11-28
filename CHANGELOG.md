@@ -3,6 +3,7 @@
 ## v0.8.12
 
 - New: a vendor whose chat window offers only "I would like to buy from you" now opens its shop straight away. Nothing is picked when the chat also has a quest or any other choice, and holding Shift shows the chat window instead. Turn it off in Options > Vendors and mail
+- Fixed: pressing Escape in combat made the game log a blocked action (BaggieFrame:Hide()). Escape no longer tries to close the bag window during combat; it goes back to closing it as soon as combat ends
 
 ## v0.8.11
 

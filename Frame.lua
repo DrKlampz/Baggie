@@ -36,7 +36,9 @@ local function SpecialFrame(on)
     local t = _G.UISpecialFrames
     if not t then return end
     for i = #t, 1, -1 do if t[i] == "BaggieFrame" then table.remove(t, i) end end
-    if on then table.insert(t, "BaggieFrame") end
+    -- Not in combat: the window is protected, so Escape trying to hide it then is a blocked action
+    -- ("BaggieFrame:Hide()" in the game's blocked-action log). It goes back on the list when combat ends.
+    if on and not InCombat() then table.insert(t, "BaggieFrame") end
 end
 
 ----------------------------------------------------------------------
@@ -1738,7 +1740,9 @@ for _, e in ipairs({ "BAG_UPDATE", "BAG_UPDATE_DELAYED", "BAG_UPDATE_COOLDOWN", 
                      "PLAYER_MONEY", "BAG_NEW_ITEMS_UPDATED", "UNIT_INVENTORY_CHANGED" }) do
     B.On(e, B.Safe(e, function() if win and F.IsOpen() then Schedule() end end))
 end
+B.On("PLAYER_REGEN_DISABLED", B.Safe("regenoff", function() SpecialFrame(false) end))
 B.On("PLAYER_REGEN_ENABLED", B.Safe("regen", function()
+    if win and F.IsOpen() then SpecialFrame(true) end
     if win and not CombatSafe() then
         if pendingOpen then pendingOpen = false pendingClose = false F.SetOpen(true)
         elseif pendingClose then pendingClose = false F.SetOpen(false) end
