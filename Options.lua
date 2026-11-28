@@ -165,6 +165,7 @@ local SECTIONS = {
         { key = "debugBank", kind = "check", label = "Print bank diagnostics to chat (for troubleshooting)" },
         { key = "autoSell", kind = "check", label = "Sell grey items automatically when a vendor opens (only grey items the vendor buys)" },
         { key = "autoBankGossip", kind = "check", label = "Pick the banker's \"check my deposit box\" chat option for me (hold Shift to see the choices)" },
+        { key = "autoVendorGossip", kind = "check", label = "Open a vendor's shop for me when its chat window offers only \"I would like to buy from you\" (hold Shift to see the chat)" },
         { key = "makeRoom", kind = "check", label = "Full bags while looting: destroy the cheapest grey items to make room (grey only, never white or better)" },
         { key = "makeRoomQuest", kind = "check", label = "Quest item to loot and no grey left: destroy the cheapest white or green item to make room (never rare or better, never quest items)" },
         { key = "makeRoomMark", kind = "check", label = "Full bags and no grey left: put a trash can on the cheapest white item (only a hint, never destroyed for you)" },

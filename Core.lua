@@ -107,6 +107,7 @@ B.DEFAULTS = {
     sellButton = true,   -- "Sell junk" button while a vendor is open
     autoSell = true,     -- sell grey items automatically on vendor open
     makeRoom = true,     -- trying to loot with full bags: destroy the cheapest grey items to open room
+    autoVendorGossip = true, -- open the shop of a vendor whose chat window offers only "I would like to buy from you"
     autoBankGossip = true, -- pick the banker's "check my deposit box" chat option for you
     makeRoomQuest = true, -- loot holds a quest item and no grey is left: destroy the cheapest white or green item
     makeRoomMark = true, -- bags full and no grey left: show a trash can on the cheapest white item

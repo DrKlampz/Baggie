@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.12
+
+- New: a vendor whose chat window offers only "I would like to buy from you" now opens its shop straight away. Nothing is picked when the chat also has a quest or any other choice, and holding Shift shows the chat window instead. Turn it off in Options > Vendors and mail
+
 ## v0.8.11
 
 - New: crests for the window watermark. Pick one from the watermark/emblem list in the Look options: the Horde and Alliance crests, the Alliance lion, Kirin Tor, a Horde symbol, and a crest for every race (Human, Dwarf, Night Elf, Gnome, Draenei, Worgen, Orc, Troll, Tauren, Forsaken, Blood Elf, Goblin, Pandaren). The race and faction crests always show in their own colors
