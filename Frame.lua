@@ -13,6 +13,7 @@ local lastCells, lastCount = {}, 0
 local editMode, pick = false, nil          -- pick = { itemID=, cell= }
 local pending = false
 local relayoutAfterCombat = false
+local everLaidOut = false          -- slots have been placed at least once since this load
 
 local function InCombat() return _G.InCombatLockdown and _G.InCombatLockdown() end
 
@@ -1015,7 +1016,7 @@ function F.Refresh()
             end
         end
     end
-    if InCombat() then
+    if InCombat() and everLaidOut then
         -- only refresh pictures in combat; moving buttons waits
         pcall(Footer, B.slotsNow or slots)
         DrawAll()
@@ -1023,7 +1024,11 @@ function F.Refresh()
         relayoutAfterCombat = true
         return
     end
+    -- After a reload in combat nothing has been placed yet, and waiting for combat to end leaves the slots piled up in a
+    -- corner. So the first layout is always attempted, and if the game refuses it in combat it is redone afterwards.
+    if InCombat() then relayoutAfterCombat = true end
     local okR, errR = pcall(Relayout, slots, text)
+    if okR then everLaidOut = true end
     if not okR then B.lastDrawError = tostring(errR) if not B.drawErrShown then B.drawErrShown = true B.Print("layout failed: " .. B.lastDrawError) end end
     pcall(Footer, slots)
     DrawAll()

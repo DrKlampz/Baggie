@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.11
+
+- Fixed: after a /reload in combat the bag window came up with its slots piled in a corner of the screen. The first layout after a load is now done even in combat (and redone when combat ends if the game refuses part of it), instead of waiting until combat is over
+
 ## v0.8.10
 
 - The bag window is now an explicitly secure frame, so the bag key can show it in combat. For troubleshooting: /run BaggieDB.keyDebug=true makes the bag key print what it did
